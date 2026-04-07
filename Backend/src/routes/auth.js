@@ -6,7 +6,7 @@ const { requireRole } = require("../middleware/rbac");
 const { authValidators, userValidators } = require("../validators");
 
 // Public routes
-router.post("/register", authValidators.register, c.register);
+// router.post("/register", authValidators.register, c.register); // Disabled: Only admin can create users
 router.post("/login", authValidators.login, c.login);
 
 // Protected routes

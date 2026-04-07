@@ -86,6 +86,7 @@ export default function Reports() {
         donorsAPI.getAll({ limit: 100 }),
         locationsAPI.getAll({ limit: 100 }),
       ])
+      console.log('Beneficiaries:', beneficiariesRes.data.data)
       setBeneficiaries(beneficiariesRes.data.data || [])
       setDonors(donorsRes.data.data || [])
       setLocations(locationsRes.data.data || [])
@@ -188,7 +189,7 @@ export default function Reports() {
         return (
           <Select
             label="Beneficiary *"
-            options={beneficiaries.map(b => ({ value: b._id, label: `${b.name} (${b.cnic})` }))}
+            options={beneficiaries.map(b => ({ value: b._id, label: `${b?.basicInfo?.headOfFamilyName} (${b?.basicInfo?.cnic})` }))}
             placeholder="Select beneficiary"
             value={filters.beneficiaryId}
             onChange={(e) => setFilters(prev => ({ ...prev, beneficiaryId: e.target.value }))}

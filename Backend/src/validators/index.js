@@ -39,7 +39,8 @@ const authValidators = {
             .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
         body('role')
             .optional()
-            .isIn(['admin', 'staff']).withMessage('Role must be admin or staff'),
+            .isIn(['admin', 'staff', 'master_inventory_manager', 'location_inventory_manager'])
+            .withMessage('Role must be admin, staff, master_inventory_manager, or location_inventory_manager'),
         validate
     ],
     login: [
@@ -326,7 +327,8 @@ const userValidators = {
             .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
         body('role')
             .notEmpty().withMessage('Role is required')
-            .isIn(['admin', 'staff']).withMessage('Role must be admin or staff'),
+            .isIn(['admin', 'staff', 'master_inventory_manager', 'location_inventory_manager'])
+            .withMessage('Role must be admin, staff, master_inventory_manager, or location_inventory_manager'),
         body('assignedLocations')
             .optional()
             .isArray().withMessage('Assigned locations must be an array'),
@@ -342,7 +344,8 @@ const userValidators = {
             .isEmail().withMessage('Invalid email format'),
         body('role')
             .optional()
-            .isIn(['admin', 'staff']).withMessage('Role must be admin or staff'),
+            .isIn(['admin', 'staff', 'master_inventory_manager', 'location_inventory_manager'])
+            .withMessage('Role must be admin, staff, master_inventory_manager, or location_inventory_manager'),
         body('status')
             .optional()
             .isIn(['active', 'inactive', 'suspended']).withMessage('Invalid status'),

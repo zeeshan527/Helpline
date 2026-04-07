@@ -43,7 +43,9 @@ const BENEFICIARY_STATUS = {
 
 const USER_ROLES = {
     ADMIN: 'admin',
-    STAFF: 'staff'
+    STAFF: 'staff',
+    MASTER_INVENTORY_MANAGER: 'master_inventory_manager',
+    LOCATION_INVENTORY_MANAGER: 'location_inventory_manager'
 };
 
 const USER_STATUS = {

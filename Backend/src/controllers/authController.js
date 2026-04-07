@@ -5,10 +5,13 @@ const jwt = require("jsonwebtoken");
 const { asyncHandler, AppError } = require("../middleware/errorHandler");
 
 /**
- * Register a new user
- * @route POST /api/auth/register
+ * Register a new user (Admin only)
+ * @route POST /api/auth/users
  */
 exports.register = asyncHandler(async (req, res) => {
+    if (!req.user || req.user.role !== 'admin') {
+        throw new AppError('Only admins can create users', 403);
+    }
     const { name, email, password, role, assignedLocations, phone } = req.body;
 
     // Check if user already exists
@@ -17,9 +20,10 @@ exports.register = asyncHandler(async (req, res) => {
         throw new AppError('User with this email already exists', 400);
     }
 
-    // Only admin can create admin users
-    if (role === 'admin' && (!req.user || req.user.role !== 'admin')) {
-        throw new AppError('Only admins can create admin users', 403);
+    // Only admin can create admin/master/location manager users
+    const allowedRoles = ['admin', 'staff', 'master_inventory_manager', 'location_inventory_manager'];
+    if (!allowedRoles.includes(role)) {
+        throw new AppError('Invalid role', 400);
     }
 
     // Hash password
@@ -37,16 +41,14 @@ exports.register = asyncHandler(async (req, res) => {
     });
 
     // Log the action
-    if (req.user) {
-        await AuditLog.log({
-            action: 'create',
-            module: 'user',
-            documentId: user._id,
-            performedBy: req.user._id,
-            description: `Created new user: ${user.email}`,
-            newState: { name: user.name, email: user.email, role: user.role }
-        });
-    }
+    await AuditLog.log({
+        action: 'create',
+        module: 'user',
+        documentId: user._id,
+        performedBy: req.user._id,
+        description: `Created new user: ${user.email}`,
+        newState: { name: user.name, email: user.email, role: user.role }
+    });
 
     res.status(201).json({
         success: true,

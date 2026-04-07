@@ -115,7 +115,7 @@ export default function UserManagement() {
         role: data.role,
         status: data.status,
         ...(data.password && { password: data.password }),
-        ...(data.role === 'staff' && { assignedLocations: data.assignedLocations }),
+        ...((data.role === 'staff' || data.role === 'location_inventory_manager') && { assignedLocations: data.assignedLocations }),
       }
 
       if (editingId) {
@@ -127,8 +127,8 @@ export default function UserManagement() {
           setSubmitting(false)
           return
         }
-        // Use auth register endpoint for creating users
-        await authAPI.register(payload)
+        // Use usersAPI.create endpoint for creating users (admin only)
+        await usersAPI.create(payload)
         success('User created successfully')
       }
       
@@ -160,6 +160,8 @@ export default function UserManagement() {
   const roleOptions = [
     { value: 'admin', label: 'Admin' },
     { value: 'staff', label: 'Staff' },
+    { value: 'master_inventory_manager', label: 'Master Inventory Manager' },
+    { value: 'location_inventory_manager', label: 'Location Inventory Manager' },
   ]
 
   const statusOptions = [
@@ -169,10 +171,16 @@ export default function UserManagement() {
   ]
 
   const getRoleBadge = (role) => {
+    const roleLabels = {
+      admin: 'Admin',
+      staff: 'Staff',
+      master_inventory_manager: 'Master Inventory Manager',
+      location_inventory_manager: 'Location Inventory Manager',
+    }
     return (
-      <span className={`badge ${role === 'admin' ? 'badge-primary' : 'badge-gray'}`}>
+      <span className={`badge ${role === 'admin' ? 'badge-primary' : role === 'master_inventory_manager' ? 'badge-purple' : role === 'location_inventory_manager' ? 'badge-green' : 'badge-gray'}`}>
         {role === 'admin' && <Shield size={12} className="mr-1" />}
-        {role.charAt(0).toUpperCase() + role.slice(1)}
+        {roleLabels[role] || role}
       </span>
     )
   }
@@ -262,7 +270,7 @@ export default function UserManagement() {
                     </TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                     <TableCell>
-                      {user.role === 'admin' ? (
+                      {user.role === 'admin' || user.role === 'master_inventory_manager' ? (
                         <span className="text-gray-500">All locations</span>
                       ) : user.assignedLocations?.length > 0 ? (
                         <span>{user.assignedLocations.length} locations</span>
@@ -355,7 +363,7 @@ export default function UserManagement() {
             error={errors.role?.message}
             {...register('role', { required: 'Role is required' })}
           />
-          {watchRole === 'staff' && (
+          {(watchRole === 'staff' || watchRole === 'location_inventory_manager') && (
             <div>
               <label className="label">Assigned Locations</label>
               <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
@@ -375,7 +383,9 @@ export default function UserManagement() {
                 )}
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                Staff users can only access data from assigned locations
+                {watchRole === 'staff'
+                  ? 'Staff users can only access data from assigned locations'
+                  : 'Location Inventory Managers can only manage inventory for assigned locations'}
               </p>
             </div>
           )}

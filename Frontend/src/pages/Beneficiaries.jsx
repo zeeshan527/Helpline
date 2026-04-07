@@ -443,12 +443,12 @@ export default function Beneficiaries() {
             />
             <Input
               label="Mobile"
-              placeholder="03XX XXXXXXX"
+              placeholder="03XXXXXXXXX"
               error={errors.mobile?.message}
               {...register('mobile', {
                 pattern: {
-                  value: /^03\d{2} \d{7}$/,
-                  message: 'Invalid mobile format (03XX XXXXXXX)',
+                  value: /^03\d{2}\d{7}$/,
+                  message: 'Invalid mobile format (03XXXXXXXXX)',
                 }
               })}
               onChange={e => {
