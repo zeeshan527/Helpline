@@ -73,9 +73,9 @@ exports.get = asyncHandler(async (req, res) => {
     // Build query
     const query = {};
 
-    // For staff, filter by assigned locations
-    if (req.user.role !== 'admin' && req.user.assignedLocations?.length > 0) {
-        query._id = { $in: req.user.assignedLocations };
+    // For staff and location_inventory_manager, filter by assigned locations
+    if (req.user.role === 'location_inventory_manager' && req.user.assignedLocations?.length > 0) {
+        query._id = { $in: req.user.assignedLocations }
     }
 
     if (type) query.type = type;
