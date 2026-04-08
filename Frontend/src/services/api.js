@@ -127,6 +127,19 @@ export const reportsAPI = {
   getComplianceReport: (params) => api.get('/reports/compliance', { params }),
 }
 
+// Fund Categories API (Admin and Staff only)
+export const fundCategoriesAPI = {
+  getAll: (params) => api.get('/fund-categories', { params }),
+  getById: (id) => api.get(`/fund-categories/${id}`),
+  create: (data) => api.post('/fund-categories', data),
+  update: (id, data) => api.put(`/fund-categories/${id}`, data),
+  delete: (id) => api.delete(`/fund-categories/${id}`),
+  getSubcategories: (categoryId, params) => api.get(`/fund-categories/${categoryId}/subcategories`, { params }),
+  createSubcategory: (categoryId, data) => api.post(`/fund-categories/${categoryId}/subcategories`, data),
+  updateSubcategory: (id, data) => api.put(`/fund-categories/subcategories/${id}`, data),
+  deleteSubcategory: (id) => api.delete(`/fund-categories/subcategories/${id}`),
+}
+
 // Combined API object for convenience
 api.auth = authAPI
 api.users = usersAPI
@@ -137,5 +150,6 @@ api.stockIn = stockInAPI
 api.stockOut = stockOutAPI
 api.dashboard = dashboardAPI
 api.reports = reportsAPI
+api.fundCategories = fundCategoriesAPI
 
 export default api

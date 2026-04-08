@@ -360,6 +360,77 @@ const userValidators = {
     ]
 };
 
+// Fund Category Validators
+const fundCategoryValidators = {
+    createCategory: [
+        body('name')
+            .trim()
+            .notEmpty().withMessage('Category name is required')
+            .isLength({ min: 2, max: 100 }).withMessage('Category name must be 2-100 characters'),
+        body('code')
+            .optional()
+            .trim()
+            .isLength({ min: 2, max: 30 }).withMessage('Code must be 2-30 characters'),
+        body('status')
+            .optional()
+            .isIn(['active', 'inactive']).withMessage('Status must be active or inactive'),
+        validate
+    ],
+    updateCategory: [
+        param('id').isMongoId().withMessage('Invalid category ID'),
+        body('name')
+            .optional()
+            .trim()
+            .isLength({ min: 2, max: 100 }).withMessage('Category name must be 2-100 characters'),
+        body('code')
+            .optional()
+            .trim()
+            .isLength({ min: 2, max: 30 }).withMessage('Code must be 2-30 characters'),
+        body('status')
+            .optional()
+            .isIn(['active', 'inactive']).withMessage('Status must be active or inactive'),
+        validate
+    ],
+    getCategoryById: [
+        param('id').isMongoId().withMessage('Invalid category ID'),
+        validate
+    ],
+    getSubcategories: [
+        param('categoryId').isMongoId().withMessage('Invalid category ID'),
+        validate
+    ],
+    createSubcategory: [
+        param('categoryId').isMongoId().withMessage('Invalid category ID'),
+        body('name')
+            .trim()
+            .notEmpty().withMessage('Subcategory name is required')
+            .isLength({ min: 2, max: 100 }).withMessage('Subcategory name must be 2-100 characters'),
+        body('code')
+            .optional()
+            .trim()
+            .isLength({ min: 2, max: 30 }).withMessage('Code must be 2-30 characters'),
+        body('status')
+            .optional()
+            .isIn(['active', 'inactive']).withMessage('Status must be active or inactive'),
+        validate
+    ],
+    updateSubcategory: [
+        param('id').isMongoId().withMessage('Invalid subcategory ID'),
+        body('name')
+            .optional()
+            .trim()
+            .isLength({ min: 2, max: 100 }).withMessage('Subcategory name must be 2-100 characters'),
+        body('code')
+            .optional()
+            .trim()
+            .isLength({ min: 2, max: 30 }).withMessage('Code must be 2-30 characters'),
+        body('status')
+            .optional()
+            .isIn(['active', 'inactive']).withMessage('Status must be active or inactive'),
+        validate
+    ]
+};
+
 module.exports = {
     validate,
     authValidators,
@@ -370,5 +441,6 @@ module.exports = {
     stockOutValidators,
     reportValidators,
     queryValidators,
-    userValidators
+    userValidators,
+    fundCategoryValidators
 };

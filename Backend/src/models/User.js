@@ -69,6 +69,12 @@ const userSchema = new mongoose.Schema({
             read: { type: Boolean, default: false },
             update: { type: Boolean, default: false },
             delete: { type: Boolean, default: false }
+        },
+        fundCategories: {
+            create: { type: Boolean, default: false },
+            read: { type: Boolean, default: false },
+            update: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false }
         }
     },
     status: {
@@ -86,7 +92,7 @@ userSchema.pre('save', function(next) {
     if (this.isNew || this.isModified('role')) {
         if (this.role === 'admin') {
             // Admin gets all permissions
-            const modules = ['beneficiaries', 'donors', 'locations', 'stockIn', 'stockOut', 'users'];
+            const modules = ['beneficiaries', 'donors', 'locations', 'stockIn', 'stockOut', 'users', 'fundCategories'];
             modules.forEach(module => {
                 this.permissions[module] = {
                     create: true,
@@ -115,6 +121,7 @@ userSchema.pre('save', function(next) {
             this.permissions.locations = { read: true };
             this.permissions.stockIn = { create: true, read: true };
             this.permissions.stockOut = { create: true, read: true };
+            this.permissions.fundCategories = { create: true, read: true, update: true, delete: true };
             this.permissions.reports = { view: true };
         }
     }

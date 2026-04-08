@@ -9,6 +9,7 @@ import {
   PackagePlus,
   PackageMinus,
   FileBarChart,
+  Wallet,
   Settings,
   LogOut,
   ChevronDown,
@@ -24,6 +25,7 @@ const NAV_ITEMS = {
     { name: 'Beneficiaries', href: '/beneficiaries', icon: Users },
     { name: 'Donors', href: '/donors', icon: Heart },
     { name: 'Locations', href: '/locations', icon: MapPin },
+    { name: 'Fund Categories', href: '/fund-categories', icon: Wallet },
     {
       name: 'Inventory',
       icon: Package,
@@ -41,6 +43,7 @@ const NAV_ITEMS = {
     { name: 'Beneficiaries', href: '/beneficiaries', icon: Users },
     { name: 'Donors', href: '/donors', icon: Heart },
     { name: 'Locations', href: '/locations', icon: MapPin },
+    { name: 'Fund Categories', href: '/fund-categories', icon: Wallet },
     { name: 'Reports', href: '/reports', icon: FileBarChart },
   ],    
   master_inventory_manager: [

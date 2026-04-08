@@ -13,6 +13,7 @@ import Locations from './pages/Locations'
 import StockIn from './pages/StockIn'
 import StockOut from './pages/StockOut'
 import Reports from './pages/Reports'
+import FundCategories from './pages/FundCategories'
 import Users from './pages/Users'
 import Settings from './pages/Settings'
 import Unauthorized from './pages/Unauthorized'
@@ -109,6 +110,15 @@ export default function App() {
           } 
         />
         
+        <Route 
+          path="/fund-categories" 
+          element={
+            <ProtectedRoute role={['admin', 'staff']} permission="fundCategories.read">
+              <FundCategories />
+            </ProtectedRoute>
+          } 
+        />
+
         <Route 
           path="/users" 
           element={

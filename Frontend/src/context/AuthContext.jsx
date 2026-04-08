@@ -56,6 +56,11 @@ export function AuthProvider({ children }) {
     if (!user) return false
     if (user.role === 'admin') return true
 
+    // Staff have full fund category access by role, even if older records lack this key.
+    if (user.role === 'staff' && permission.startsWith('fundCategories.')) {
+      return true
+    }
+
     // For master_inventory_manager and location_inventory_manager, allow stockIn/stockOut permissions
     if (
       (user.role === 'master_inventory_manager' || user.role === 'location_inventory_manager') &&

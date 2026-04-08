@@ -46,6 +46,12 @@ const PERMISSIONS = {
     DASHBOARD: {
         VIEW: 'dashboard.view',
         ANALYTICS: 'dashboard.analytics'
+    },
+    FUND_CATEGORIES: {
+        CREATE: 'fundCategories.create',
+        READ: 'fundCategories.read',
+        UPDATE: 'fundCategories.update',
+        DELETE: 'fundCategories.delete'
     }
 };
 
@@ -59,7 +65,8 @@ const ROLE_PERMISSIONS = {
         ...Object.values(PERMISSIONS.STOCK_OUT),
         ...Object.values(PERMISSIONS.REPORTS),
         ...Object.values(PERMISSIONS.USERS),
-        ...Object.values(PERMISSIONS.DASHBOARD)
+        ...Object.values(PERMISSIONS.DASHBOARD),
+        ...Object.values(PERMISSIONS.FUND_CATEGORIES)
     ],
     staff: [
         PERMISSIONS.BENEFICIARIES.READ,
@@ -72,7 +79,11 @@ const ROLE_PERMISSIONS = {
         PERMISSIONS.STOCK_OUT.READ,
         PERMISSIONS.STOCK_OUT.CREATE,
         PERMISSIONS.REPORTS.VIEW,
-        PERMISSIONS.DASHBOARD.VIEW
+        PERMISSIONS.DASHBOARD.VIEW,
+        PERMISSIONS.FUND_CATEGORIES.CREATE,
+        PERMISSIONS.FUND_CATEGORIES.READ,
+        PERMISSIONS.FUND_CATEGORIES.UPDATE,
+        PERMISSIONS.FUND_CATEGORIES.DELETE
     ],
     master_inventory_manager: [
         PERMISSIONS.STOCK_IN.CREATE,
