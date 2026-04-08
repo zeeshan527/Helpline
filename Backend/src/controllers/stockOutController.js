@@ -230,9 +230,9 @@ exports.get = asyncHandler(async (req, res) => {
     // Build query
     const query = {};
 
-    // Apply location filter for staff
-    if (req.locationFilter) {
-        Object.assign(query, req.locationFilter);
+    // Apply location filter only for location_inventory_manager
+    if (req.user.role === 'location_inventory_manager' && req.locationFilter) {
+        Object.assign(query, req.locationFilter)
     }
 
     if (locationId) query.locationId = locationId;

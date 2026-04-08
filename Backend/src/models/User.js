@@ -100,18 +100,18 @@ userSchema.pre('save', function(next) {
             // Full inventory access
             this.permissions.stockIn = { create: true, read: true, update: true, delete: true, transfer: true };
             this.permissions.stockOut = { create: true, read: true, update: true, delete: true };
-            this.permissions.locations = { read: true };
+            this.permissions.locations = { create: true, read: true, update: true, delete: true};
             this.permissions.reports = { view: true, export: true };
         } else if (this.role === 'location_inventory_manager') {
             // Only assigned location
             this.permissions.stockIn = { create: true, read: true, update: true, delete: false };
             this.permissions.stockOut = { create: true, read: true, update: true, delete: false };
-            this.permissions.locations = { read: true };
+            this.permissions.locations = { create: true, read: true, update: true, delete: true };
             this.permissions.reports = { view: true };
         } else if (this.role === 'staff') {
             // Staff default permissions
-            this.permissions.beneficiaries = { create: true, read: true, update: true, delete: false };
-            this.permissions.donors = { read: true };
+            this.permissions.beneficiaries = { create: true, read: true, update: true, delete: true };
+            this.permissions.donors = {create: true, read: true, update: true, delete: true };
             this.permissions.locations = { read: true };
             this.permissions.stockIn = { create: true, read: true };
             this.permissions.stockOut = { create: true, read: true };

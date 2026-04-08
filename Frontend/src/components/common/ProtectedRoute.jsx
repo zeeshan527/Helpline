@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 
 export default function ProtectedRoute({ children, permission, role }) {
   const { isAuthenticated, loading, hasPermission, hasRole } = useAuth()
+  console.log( 'permission:', permission, 'role:', role)  
   const location = useLocation()
 
   if (loading) {

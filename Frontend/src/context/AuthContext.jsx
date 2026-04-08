@@ -52,24 +52,35 @@ export function AuthProvider({ children }) {
   }
 
   const hasPermission = (permission) => {
+    console.log('Checking permission:', permission, 'for user:', user)
     if (!user) return false
     if (user.role === 'admin') return true
-    
+
+    // For master_inventory_manager and location_inventory_manager, allow stockIn/stockOut permissions
+    if (
+      (user.role === 'master_inventory_manager' || user.role === 'location_inventory_manager') &&
+      (permission.startsWith('stockIn.') || permission.startsWith('stockOut.'))
+    ) {
+      // Check permission object
+      const [module, action] = permission.split('.')
+      return user.permissions?.[module]?.[action] === true
+    }
+
     // Handle permission string like "beneficiaries.create"
     if (!user.permissions) return false
-    
+
     // If permissions is an array (string array format)
     if (Array.isArray(user.permissions)) {
       return user.permissions.includes(permission)
     }
-    
+
     // If permissions is an object (nested object format)
     // e.g., { beneficiaries: { create: true, read: true } }
     const [module, action] = permission.split('.')
     if (module && action) {
       return user.permissions[module]?.[action] === true
     }
-    
+
     // Check if module-level permission exists
     return !!user.permissions[permission]
   }

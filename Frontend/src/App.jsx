@@ -85,7 +85,7 @@ export default function App() {
         <Route 
           path="/inventory/stock-in" 
           element={
-            <ProtectedRoute permission="inventory.read">
+            <ProtectedRoute permission="stockIn.read">
               <StockIn />
             </ProtectedRoute>
           } 
@@ -94,7 +94,7 @@ export default function App() {
         <Route 
           path="/inventory/stock-out" 
           element={
-            <ProtectedRoute permission="inventory.read">
+            <ProtectedRoute permission="stockOut.read">
               <StockOut />
             </ProtectedRoute>
           } 

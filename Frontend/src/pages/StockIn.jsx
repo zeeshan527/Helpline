@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { Navigate } from 'react-router-dom'
 import { stockInAPI, locationsAPI, donorsAPI } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Card from '../components/common/Card'
@@ -25,8 +26,15 @@ import {
   Package,
 } from 'lucide-react'
 import { format } from 'date-fns'
+import { useState, useEffect, useMemo } from 'react'
 
 export default function StockIn() {
+  const { user, hasRole } = useAuth()
+  // Route protection: Only allow master/location inventory managers and admin
+  if (!user) return null
+  if (!['admin', 'master_inventory_manager', 'location_inventory_manager'].includes(user.role)) {
+    return <Navigate to="/unauthorized" replace />
+  }
   const [stockItems, setStockItems] = useState([])
   const [locations, setLocations] = useState([])
   const [donors, setDonors] = useState([])
@@ -67,6 +75,10 @@ export default function StockIn() {
         limit: pagination.limit,
         ...(search && { search }),
         ...(sourceFilter && { sourceType: sourceFilter }),
+      }
+      // If location inventory manager, filter by assigned locations
+      if (user.role === 'location_inventory_manager' && user.assignedLocations?.length > 0) {
+        params.locationId = user.assignedLocations[0] // Only their assigned location (assume one)
       }
       const response = await stockInAPI.getAll(params)
       setStockItems(response.data.data)
@@ -133,7 +145,7 @@ export default function StockIn() {
     setValue('sourceType', item.source?.type || 'donor')
     setValue('sourceReference', item.source?.referenceId || '')
     setValue('companyName', item.source?.companyName || '')
-    setValue('location', item.location?._id || '')
+    setValue('location', item.locationId?._id || '')
     setValue('distributionPolicy', item.distributionPolicy?.type || 'flexible')
     setValue('controlPrice', item.distributionPolicy?.controlPrice || '')
     setValue('maxDiscount', item.distributionPolicy?.maxDiscountPercent || '')
@@ -162,7 +174,7 @@ export default function StockIn() {
           ...(data.sourceType === 'donor' && data.sourceReference && { referenceId: data.sourceReference }),
           ...(data.sourceType === 'company' && { companyName: data.companyName }),
         },
-        location: data.location,
+        locationId: data.location,
         pricing: {
           unitPrice: parseFloat(data.unitPrice) || 0,
         },
@@ -234,10 +246,15 @@ export default function StockIn() {
     }
   }
 
-  const locationOptions = locations.map(loc => ({
-    value: loc._id,
-    label: loc.name,
-  }))
+  // For location inventory manager, only show their assigned location in dropdown
+const locationOptions = useMemo(() => {
+  const assignedLocationIds = user.assignedLocations?.map(l => l._id || l) || [];
+  return user.role === 'location_inventory_manager'
+    ? locations
+        .filter(loc => assignedLocationIds.includes(loc._id))
+        .map(loc => ({ value: loc._id, label: loc.name }))
+    : locations.map(loc => ({ value: loc._id, label: loc.name }));
+}, [locations, user.assignedLocations, user.role]);
 
   const donorOptions = donors.map(d => ({
     value: d._id,
@@ -275,6 +292,7 @@ export default function StockIn() {
     { value: 'box', label: 'Box' },
     { value: 'pack', label: 'Pack' },
     { value: 'bag', label: 'Bag' },
+    { value: 'carton', label: 'Carton' }, 
   ]
 
   const categoryOptions = [
@@ -397,7 +415,7 @@ export default function StockIn() {
                         <div className="text-sm text-gray-500">{item.source.donor.name}</div>
                       )}
                     </TableCell>
-                    <TableCell>{item.location?.name || 'N/A'}</TableCell>
+                    <TableCell>{item.locationId?.name || 'N/A'}</TableCell>
                     <TableCell>{getPolicyBadge(item.distributionPolicy?.type)}</TableCell>
                     <TableCell>
                       {item.createdAt ? format(new Date(item.createdAt), 'MMM dd, yyyy') : 'N/A'}
@@ -692,7 +710,7 @@ export default function StockIn() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Location</p>
-                <p className="font-medium">{viewModal.data.location?.name || 'N/A'}</p>
+                <p className="font-medium">{viewModal.data.locationId?.name || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Distribution Policy</p>

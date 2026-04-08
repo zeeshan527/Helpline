@@ -16,32 +16,78 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: null },
-  { name: 'Beneficiaries', href: '/beneficiaries', icon: Users, permission: 'beneficiaries.read' },
-  { name: 'Donors', href: '/donors', icon: Heart, permission: 'donors.read' },
-  { name: 'Locations', href: '/locations', icon: MapPin, permission: 'locations.read' },
-  {
-    name: 'Inventory',
-    icon: Package,
-    permission: 'inventory.read',
-    children: [
-      { name: 'Stock In', href: '/inventory/stock-in', icon: PackagePlus },
-      { name: 'Stock Out', href: '/inventory/stock-out', icon: PackageMinus },
-    ],
-  },
-  { name: 'Reports', href: '/reports', icon: FileBarChart, permission: 'reports.read' },
-]
 
-const adminNavigation = [
-  { name: 'Users', href: '/users', icon: Users, permission: 'users.read' },
-  { name: 'Settings', href: '/settings', icon: Settings, permission: null },
-]
+// Navigation definitions for each role
+const NAV_ITEMS = {
+  admin: [
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Beneficiaries', href: '/beneficiaries', icon: Users },
+    { name: 'Donors', href: '/donors', icon: Heart },
+    { name: 'Locations', href: '/locations', icon: MapPin },
+    {
+      name: 'Inventory',
+      icon: Package,
+      children: [
+        { name: 'Stock In', href: '/inventory/stock-in', icon: PackagePlus },
+        { name: 'Stock Out', href: '/inventory/stock-out', icon: PackageMinus },
+      ],
+    },
+    { name: 'Reports', href: '/reports', icon: FileBarChart },
+    { name: 'Users', href: '/users', icon: Users },
+    { name: 'Settings', href: '/settings', icon: Settings },
+  ],
+  staff: [
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Beneficiaries', href: '/beneficiaries', icon: Users },
+    { name: 'Donors', href: '/donors', icon: Heart },
+    { name: 'Locations', href: '/locations', icon: MapPin },
+    { name: 'Reports', href: '/reports', icon: FileBarChart },
+  ],    
+  master_inventory_manager: [
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Locations', href: '/locations', icon: MapPin },
+    {
+      name: 'Inventory (All Locations)',
+      icon: Package,
+      children: [
+        { name: 'Stock In (All)', href: '/inventory/stock-in', icon: PackagePlus },
+        { name: 'Stock Out (All)', href: '/inventory/stock-out', icon: PackageMinus },
+      ],
+    },
+    { name: 'Reports', href: '/reports', icon: FileBarChart },
+    // Add more inventory analytics/transfer as needed
+  ],
+  location_inventory_manager: [
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    {
+      name: 'Inventory (My Location)',
+      icon: Package,
+      children: [
+        { name: 'Stock In (Mine)', href: '/inventory/stock-in', icon: PackagePlus },
+        { name: 'Stock Out (Mine)', href: '/inventory/stock-out', icon: PackageMinus },
+      ],
+    },
+    { name: 'Locations', href: '/locations', icon: MapPin },
+    { name: 'Reports', href: '/reports', icon: FileBarChart },
+  ],
+}
+
 
 export default function Sidebar() {
-  const { user, logout, hasPermission, isAdmin } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [expandedItems, setExpandedItems] = useState(['Inventory'])
+
+  // Role mapping (ensure your backend sets these role strings)
+  const getRoleKey = () => {
+    if (!user) return 'staff'
+    if (user.role === 'admin') return 'admin'
+    if (user.role === 'master_inventory_manager') return 'master_inventory_manager'
+    if (user.role === 'location_inventory_manager') return 'location_inventory_manager'
+    return 'staff'
+  }
+
+  const navItems = NAV_ITEMS[getRoleKey()] || NAV_ITEMS.staff
 
   const handleLogout = () => {
     logout()
@@ -54,14 +100,7 @@ export default function Sidebar() {
     )
   }
 
-  const canAccess = (permission) => {
-    if (!permission) return true
-    return hasPermission(permission)
-  }
-
   const renderNavItem = (item) => {
-    if (!canAccess(item.permission)) return null
-
     if (item.children) {
       const isExpanded = expandedItems.includes(item.name)
       return (
@@ -98,7 +137,6 @@ export default function Sidebar() {
         </div>
       )
     }
-
     return (
       <NavLink
         key={item.href}
@@ -129,18 +167,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navigation.map(renderNavItem)}
-
-        {isAdmin() && (
-          <>
-            <div className="pt-4 pb-2">
-              <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Admin
-              </p>
-            </div>
-            {adminNavigation.map(renderNavItem)}
-          </>
-        )}
+        {navItems.map(renderNavItem)}
       </nav>
 
       {/* User section */}
