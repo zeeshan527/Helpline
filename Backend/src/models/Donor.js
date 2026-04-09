@@ -34,6 +34,19 @@ const donorSchema = new mongoose.Schema({
         enum: ['active', 'inactive'],
         default: 'active'
     },
+    donationType: {
+        type: String,
+        enum: ['once', 'monthly', 'yearly'],
+        default: 'once'
+    },
+    fundCategoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'FundCategory'
+    },
+    fundSubcategoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'FundSubCategory'
+    },
     // Track donation preferences
     preferences: {
         preferredDistribution: {
@@ -52,6 +65,7 @@ const donorSchema = new mongoose.Schema({
     stats: {
         totalDonations: { type: Number, default: 0 },
         totalValue: { type: Number, default: 0 },
+        latestDonation: { type: Number, default: 0 },
         lastDonationDate: Date
     },
     customFields: {

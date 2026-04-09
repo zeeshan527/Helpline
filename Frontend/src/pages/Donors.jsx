@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { donorsAPI } from '../services/api'
+import { donorsAPI, fundCategoriesAPI } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Card from '../components/common/Card'
 import Button from '../components/common/Button'
@@ -43,16 +43,33 @@ export default function Donors() {
   const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null })
   const [viewModal, setViewModal] = useState({ open: false, data: null })
   const [editingId, setEditingId] = useState(null)
+  const [editingDonor, setEditingDonor] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [fundCategories, setFundCategories] = useState([])
+  const [fundSubcategories, setFundSubcategories] = useState([])
   
   const { success, error: showError } = useToast()
   const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm()
   
   const donorType = watch('type')
+  const fundCategoryId = watch('fundCategoryId')
 
   useEffect(() => {
     fetchDonors()
   }, [pagination.page, search, typeFilter])
+
+  useEffect(() => {
+    fetchFundCategories()
+  }, [])
+
+  useEffect(() => {
+    if (!fundCategoryId) {
+      setFundSubcategories([])
+      setValue('fundSubcategoryId', '')
+      return
+    }
+    fetchSubcategories(fundCategoryId)
+  }, [fundCategoryId, setValue])
 
   const fetchDonors = async () => {
     try {
@@ -77,10 +94,34 @@ export default function Donors() {
     }
   }
 
+  const fetchFundCategories = async () => {
+    try {
+      const response = await fundCategoriesAPI.getAll({ status: 'active', limit: 50, sortBy: 'name', sortOrder: 'asc' })
+      setFundCategories(response.data.data || [])
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const fetchSubcategories = async (categoryId) => {
+    try {
+      const response = await fundCategoriesAPI.getSubcategories(categoryId, { status: 'active' })
+      setFundSubcategories(response.data.data || [])
+    } catch (err) {
+      setFundSubcategories([])
+      console.error(err)
+    }
+  }
+
   const openCreateModal = () => {
     reset({
       name: '',
       type: 'individual',
+      donationType: 'once',
+      fundCategoryId: '',
+      fundSubcategoryId: '',
+      totalDonations: 0,
+      latestDonation: 0,
       phone: '',
       email: '',
       address: '',
@@ -90,12 +131,18 @@ export default function Donors() {
       notes: '',
     })
     setEditingId(null)
+    setEditingDonor(null)
     setModalOpen(true)
   }
 
   const openEditModal = (donor) => {
     setValue('name', donor.name)
     setValue('type', donor.type)
+    setValue('donationType', donor.donationType || 'once')
+    setValue('fundCategoryId', donor.fundCategoryId?._id || donor.fundCategoryId || '')
+    setValue('fundSubcategoryId', donor.fundSubcategoryId?._id || donor.fundSubcategoryId || '')
+    setValue('totalDonations', donor.stats?.totalDonations ?? 0)
+    setValue('latestDonation', donor.stats?.latestDonation ?? 0)
     setValue('phone', donor.contact?.phone || '')
     setValue('email', donor.contact?.email || '')
     setValue('address', donor.contact?.address || '')
@@ -104,6 +151,7 @@ export default function Donors() {
     setValue('taxId', donor.company?.taxId || '')
     setValue('notes', donor.notes || '')
     setEditingId(donor._id)
+    setEditingDonor(donor)
     setModalOpen(true)
   }
 
@@ -113,6 +161,13 @@ export default function Donors() {
       const payload = {
         name: data.name,
         type: data.type,
+        donationType: data.donationType,
+        ...(data.fundCategoryId && { fundCategoryId: data.fundCategoryId }),
+        ...(data.fundSubcategoryId && { fundSubcategoryId: data.fundSubcategoryId }),
+        stats: {
+          totalDonations: data.totalDonations ? parseInt(data.totalDonations, 10) : 0,
+          latestDonation: data.latestDonation ? parseInt(data.latestDonation, 10) : 0,
+        },
         contact: {
           phone: data.phone,
           email: data.email,
@@ -226,9 +281,13 @@ export default function Donors() {
                 <tr>
                   <TableHeaderCell>Name</TableHeaderCell>
                   <TableHeaderCell>Type</TableHeaderCell>
-                  <TableHeaderCell>Contact</TableHeaderCell>
-                  <TableHeaderCell>Donations</TableHeaderCell>
-                  <TableHeaderCell>Total Value</TableHeaderCell>
+                <TableHeaderCell>Donation Type</TableHeaderCell>
+                <TableHeaderCell>Fund Category</TableHeaderCell>
+                <TableHeaderCell>Subcategory</TableHeaderCell>
+                <TableHeaderCell>Contact</TableHeaderCell>
+                <TableHeaderCell>Donations</TableHeaderCell>
+                <TableHeaderCell>Latest Donation</TableHeaderCell>
+                <TableHeaderCell>Total Value</TableHeaderCell>
                   <TableHeaderCell>Status</TableHeaderCell>
                   <TableHeaderCell>Actions</TableHeaderCell>
                 </tr>
@@ -260,6 +319,15 @@ export default function Donors() {
                       <span className="badge badge-gray capitalize">{donor.type}</span>
                     </TableCell>
                     <TableCell>
+                      <span className="badge badge-gray capitalize">{donor.donationType || 'once'}</span>
+                    </TableCell>
+                    <TableCell>
+                      {donor.fundCategoryId?.name || '—'}
+                    </TableCell>
+                    <TableCell>
+                      {donor.fundSubcategoryId?.name || '—'}
+                    </TableCell>
+                    <TableCell>
                       <div className="space-y-1">
                         {donor.contact?.phone && (
                           <div className="flex items-center gap-1 text-sm text-gray-600">
@@ -280,6 +348,9 @@ export default function Donors() {
                         <Package size={14} className="text-gray-400" />
                         {donor.stats?.totalDonations || 0}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <span>{donor.stats?.latestDonation ?? 0}</span>
                     </TableCell>
                     <TableCell>
                       <span className="font-medium">
@@ -363,6 +434,51 @@ export default function Donors() {
             />
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Input
+              label="Total Donations"
+              type="number"
+              min="0"
+              placeholder="0"
+              error={errors.totalDonations?.message}
+              {...register('totalDonations', { valueAsNumber: true })}
+            />
+            <Input
+              label="Latest Donation"
+              type="number"
+              min="0"
+              placeholder="0"
+              error={errors.latestDonation?.message}
+              {...register('latestDonation', { valueAsNumber: true })}
+            />
+            <Select
+              label="Donation Type *"
+              options={[
+                { value: 'once', label: 'Once' },
+                { value: 'monthly', label: 'Monthly' },
+                { value: 'yearly', label: 'Yearly' }
+              ]}
+              error={errors.donationType?.message}
+              {...register('donationType', { required: 'Donation type is required' })}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Select
+              label="Fund Category"
+              options={fundCategories.map((category) => ({ value: category._id, label: category.name }))}
+              placeholder="Select fund category"
+              error={errors.fundCategoryId?.message}
+              {...register('fundCategoryId')}
+            />
+            <Select
+              label="Fund Subcategory"
+              options={fundSubcategories.map((subcategory) => ({ value: subcategory._id, label: subcategory.name }))}
+              placeholder="Select fund subcategory"
+              error={errors.fundSubcategoryId?.message}
+              {...register('fundSubcategoryId')}
+            />
+          </div>
+
           {(donorType === 'company' || donorType === 'organization') && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
               <Input
@@ -440,6 +556,14 @@ export default function Donors() {
                 <p className="text-sm text-gray-500">Email</p>
                 <p className="font-medium">{viewModal.data.contact?.email || 'N/A'}</p>
               </div>
+                <div>
+                <p className="text-sm text-gray-500">Donation Type</p>
+                <p className="font-medium capitalize">{viewModal.data.donationType || 'once'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Latest Donation</p>
+                <p className="font-medium">{viewModal.data.stats?.latestDonation ?? 0}</p>
+              </div>
               <div>
                 <p className="text-sm text-gray-500">Total Donations</p>
                 <p className="font-medium">{viewModal.data.stats?.totalDonations || 0}</p>
@@ -447,6 +571,14 @@ export default function Donors() {
               <div>
                 <p className="text-sm text-gray-500">Total Value</p>
                 <p className="font-medium">Rs. {(viewModal.data.stats?.totalValue || 0).toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Fund Category</p>
+                <p className="font-medium">{viewModal.data.fundCategoryId?.name || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Subcategory</p>
+                <p className="font-medium">{viewModal.data.fundSubcategoryId?.name || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Status</p>

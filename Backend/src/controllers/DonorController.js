@@ -68,6 +68,8 @@ exports.get = asyncHandler(async (req, res) => {
     const [donors, total] = await Promise.all([
         Donor.find(query)
             .populate('createdBy', 'name')
+            .populate('fundCategoryId', 'name')
+            .populate('fundSubcategoryId', 'name')
             .sort(sort)
             .skip(skip)
             .limit(parseInt(limit)),
@@ -92,7 +94,9 @@ exports.get = asyncHandler(async (req, res) => {
  */
 exports.getById = asyncHandler(async (req, res) => {
     const donor = await Donor.findById(req.params.id)
-        .populate('createdBy', 'name email');
+        .populate('createdBy', 'name email')
+        .populate('fundCategoryId', 'name')
+        .populate('fundSubcategoryId', 'name');
 
     if (!donor) {
         throw new AppError('Donor not found', 404);

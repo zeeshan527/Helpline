@@ -113,6 +113,21 @@ const donorValidators = {
         body('contact.phone')
             .optional()
             .notEmpty().withMessage('Phone cannot be empty if provided'),
+        body('donationType')
+            .optional()
+            .isIn(['once', 'monthly', 'yearly']).withMessage('Invalid donation type'),
+        body('fundCategoryId')
+            .optional()
+            .isMongoId().withMessage('Invalid fund category ID'),
+        body('fundSubcategoryId')
+            .optional()
+            .isMongoId().withMessage('Invalid fund subcategory ID'),
+        body('stats.totalDonations')
+            .optional()
+            .isInt({ min: 0 }).withMessage('Total donations must be a valid number'),
+        body('stats.latestDonation')
+            .optional()
+            .isInt({ min: 0 }).withMessage('Latest donation must be a valid number'),
         validate
     ],
     update: [
@@ -124,6 +139,21 @@ const donorValidators = {
         body('contact.email')
             .optional()
             .isEmail().withMessage('Invalid email format'),
+        body('donationType')
+            .optional()
+            .isIn(['once', 'monthly', 'yearly']).withMessage('Invalid donation type'),
+        body('fundCategoryId')
+            .optional()
+            .isMongoId().withMessage('Invalid fund category ID'),
+        body('fundSubcategoryId')
+            .optional()
+            .isMongoId().withMessage('Invalid fund subcategory ID'),
+        body('stats.totalDonations')
+            .optional()
+            .isInt({ min: 0 }).withMessage('Total donations must be a valid number'),
+        body('stats.latestDonation')
+            .optional()
+            .isInt({ min: 0 }).withMessage('Latest donation must be a valid number'),
         validate
     ],
     getById: [
