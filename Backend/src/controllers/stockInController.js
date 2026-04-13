@@ -1,5 +1,6 @@
 
 const StockIn = require("../models/StockIn");
+const StockOut = require("../models/StockOut");
 const Donor = require("../models/Donor");
 const Location = require("../models/Location");
 const AuditLog = require("../models/AuditLog");
@@ -250,6 +251,52 @@ exports.update = asyncHandler(async (req, res) => {
         success: true,
         message: 'Stock updated successfully',
         data: stockIn
+    });
+});
+
+/**
+ * Delete stock in record
+ * @route DELETE /api/stock-in/:id
+ */
+exports.delete = asyncHandler(async (req, res) => {
+    const stockIn = await StockIn.findById(req.params.id);
+    if (!stockIn) {
+        throw new AppError('Stock record not found', 404);
+    }
+
+    if (req.user.role !== 'admin') {
+        const hasAccess = req.user.assignedLocations?.some(
+            loc => loc.toString() === stockIn.locationId.toString()
+        );
+        if (!hasAccess) {
+            throw new AppError('Not authorized to delete this stock record', 403);
+        }
+    }
+
+    const distributionCount = await StockOut.countDocuments({ stockInId: stockIn._id });
+    if (distributionCount > 0) {
+        throw new AppError('Cannot delete stock item that has already been distributed', 400);
+    }
+
+    await StockIn.deleteOne({ _id: stockIn._id });
+
+    await AuditLog.log({
+        action: 'delete',
+        module: 'stockIn',
+        documentId: stockIn._id,
+        performedBy: req.user._id,
+        description: `Deleted stock item: ${stockIn.product.name}`,
+        previousState: {
+            product: stockIn.product.name,
+            quantity: stockIn.quantity,
+            locationId: stockIn.locationId
+        },
+        locationId: stockIn.locationId
+    });
+
+    res.json({
+        success: true,
+        message: 'Stock record deleted successfully'
     });
 });
 

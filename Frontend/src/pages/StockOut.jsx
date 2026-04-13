@@ -101,7 +101,7 @@ export default function StockOut() {
 
   const fetchBeneficiaries = async () => {
     try {
-      const response = await beneficiariesAPI.getAll({ limit: 100, status: 'active' })
+      const response = await beneficiariesAPI.getAll({ limit: 20, status: 'approved' })
       setBeneficiaries(response.data.data || [])
     } catch (err) {
       console.error('Failed to fetch beneficiaries')
@@ -135,12 +135,16 @@ export default function StockOut() {
     try {
       setSubmitting(true)
       const payload = {
-        stockIn: data.stockIn,
-        beneficiary: data.beneficiary,
+        stockInId: data.stockIn,
+        beneficiaryId: data.beneficiary,
+        locationId: selectedStockIn?.locationId?._id || selectedStockIn?.locationId || selectedStockIn?.location?._id || selectedStockIn?.location,
         quantity: parseInt(data.quantity),
-        distributionMode: data.distributionMode,
-        ...(data.distributionMode !== 'free' && { priceApplied: parseFloat(data.priceApplied) }),
-        ...(data.distributionMode === 'discounted' && { discountPercent: parseFloat(data.discountPercent) }),
+        distribution: {
+          mode: data.distributionMode,
+          price: data.distributionMode === 'free' ? 0 : parseFloat(data.priceApplied) || 0,
+          ...(data.distributionMode === 'discounted' && { discountPercent: parseFloat(data.discountPercent) || 0 }),
+          ...(data.distributionMode === 'discounted' && { originalPrice: parseFloat(data.priceApplied) || 0 }),
+        },
         ...(data.notes && { notes: data.notes }),
       }
 
@@ -186,7 +190,7 @@ export default function StockOut() {
 
   const beneficiaryOptions = beneficiaries.map(b => ({
     value: b._id,
-    label: `${b.name} (${b.cnic})`,
+    label: `${b?.basicInfo?.headOfFamilyName || b.name || 'Unknown'} (${b?.basicInfo?.cnic || b.cnic || 'N/A'})`,
   }))
 
   const modeOptions = [
@@ -294,10 +298,10 @@ export default function StockOut() {
                         </div>
                         <div>
                           <div className="font-medium text-gray-900">
-                            {item.stockIn?.product?.name || 'N/A'}
+                            {item.stockInId?.product?.name || 'N/A'}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {item.location?.name || 'N/A'}
+                            {item.locationId?.name || 'N/A'}
                           </div>
                         </div>
                       </div>
@@ -305,17 +309,17 @@ export default function StockOut() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <User size={14} className="text-gray-400" />
-                        <span>{item.beneficiary?.name || 'N/A'}</span>
+                        <span>{item.beneficiaryId?.basicInfo?.headOfFamilyName ||  'N/A'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       {item.quantity} {item.stockIn?.product?.unit || 'units'}
                     </TableCell>
-                    <TableCell>{getModeBadge(item.distributionMode)}</TableCell>
+                    <TableCell>{getModeBadge(item.distribution?.mode)}</TableCell>
                     <TableCell>
-                      {item.distributionMode === 'free' 
+                      {item.distribution?.mode === 'free' 
                         ? '-' 
-                        : `Rs. ${(item.totalAmount || 0).toLocaleString()}`
+                        : `Rs. ${(item.revenue || (item.distribution?.price || 0) * item.quantity || 0).toLocaleString()}`
                       }
                     </TableCell>
                     <TableCell>
@@ -505,10 +509,10 @@ export default function StockOut() {
               </div>
               <div>
                 <h3 className="text-xl font-semibold">
-                  {viewModal.data.stockIn?.product?.name || 'N/A'}
+                  {viewModal.data.stockInId?.product?.name || 'N/A'}
                 </h3>
                 <p className="text-gray-500">
-                  Distribution to {viewModal.data.beneficiary?.name || 'N/A'}
+                  Distribution to {viewModal.data.beneficiaryId?.basicInfo?.headOfFamilyName || 'N/A'}
                 </p>
               </div>
             </div>
@@ -516,43 +520,43 @@ export default function StockOut() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-500">Beneficiary</p>
-                <p className="font-medium">{viewModal.data.beneficiary?.name || 'N/A'}</p>
+                <p className="font-medium">{viewModal.data.beneficiaryId?.basicInfo?.headOfFamilyName || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">CNIC</p>
-                <p className="font-medium">{viewModal.data.beneficiary?.cnic || 'N/A'}</p>
+                <p className="font-medium">{viewModal.data.beneficiaryId?.basicInfo?.cnic || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Quantity</p>
                 <p className="font-medium">
-                  {viewModal.data.quantity} {viewModal.data.stockIn?.product?.unit || 'units'}
+                  {viewModal.data.quantity} {viewModal.data.stockInId?.product?.unit || 'units'}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Distribution Mode</p>
-                {getModeBadge(viewModal.data.distributionMode)}
+                {getModeBadge(viewModal.data.distribution?.mode)}
               </div>
               <div>
                 <p className="text-sm text-gray-500">Price Applied</p>
                 <p className="font-medium">
-                  {viewModal.data.distributionMode === 'free' 
+                  {viewModal.data.distribution?.mode === 'free' 
                     ? 'Free' 
-                    : `Rs. ${(viewModal.data.priceApplied || 0).toLocaleString()}`
+                    : `Rs. ${(viewModal.data.distribution?.price || 0).toLocaleString()}`
                   }
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Amount</p>
                 <p className="font-medium">
-                  {viewModal.data.distributionMode === 'free' 
+                  {viewModal.data.distribution?.mode === 'free' 
                     ? '-' 
-                    : `Rs. ${(viewModal.data.totalAmount || 0).toLocaleString()}`
+                    : `Rs. ${(viewModal.data.revenue || (viewModal.data.distribution?.price || 0) * viewModal.data.quantity || 0).toLocaleString()}`
                   }
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Location</p>
-                <p className="font-medium">{viewModal.data.location?.name || 'N/A'}</p>
+                <p className="font-medium">{viewModal.data.locationId?.name || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Date</p>

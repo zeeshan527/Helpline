@@ -162,6 +162,7 @@ export default function Beneficiaries() {
   }
 
   const onSubmit = async (data) => {
+    console.log('Form Data:', data) // Debugging log
     try {
       setSubmitting(true)
       // Build payload matching backend structure
@@ -266,7 +267,6 @@ export default function Beneficiaries() {
   ]
 
   const employmentOptions = [
-    { value: '', label: 'Select status' },
     { value: 'employed', label: 'Employed' },
     { value: 'daily_wages', label: 'Daily Wages' },
     { value: 'unemployed', label: 'Unemployed' },

@@ -205,7 +205,7 @@ const beneficiarySchema = new mongoose.Schema({
 
 // Calculate family total members
 beneficiarySchema.pre('save', function(next) {
-    if (this.family && this.family.members) {
+    if (this.family && Array.isArray(this.family.members) && this.family.members.length > 0) {
         this.family.totalMembers = this.family.members.length + 1; // +1 for head of family
     }
     next();

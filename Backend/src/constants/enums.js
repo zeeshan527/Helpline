@@ -78,13 +78,16 @@ const ELIGIBILITY_FREQUENCY = {
 };
 
 const PRODUCT_UNITS = {
-    PIECES: 'pieces',
+    PIECE: 'piece',
     KG: 'kg',
-    LITERS: 'liters',
-    BOXES: 'boxes',
-    PACKETS: 'packets',
-    BAGS: 'bags',
-    CARTONS: 'cartons'
+    G: 'g',
+    LITER: 'liter',
+    ML: 'ml',
+    BOX: 'box',
+    PACKET: 'packet',
+    BAG: 'bag',
+    BAG: 'bag',
+    CARTON: 'carton'
 };
 
 const VIOLATION_TYPES = {

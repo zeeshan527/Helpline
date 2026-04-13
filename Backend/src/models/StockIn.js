@@ -15,7 +15,7 @@ const stockInSchema = new mongoose.Schema({
         unit: {
             type: String,
             required: [true, 'Unit is required'],
-            enum: ['piece', 'kg', 'g', 'liter', 'ml', 'boxe', 'packet', 'bag', 'carton']
+            enum: ['piece', 'kg', 'g', 'liter', 'ml', 'box', 'packet', 'bag', 'carton']
         },
         description: String,
         sku: String,
@@ -103,6 +103,7 @@ const stockInSchema = new mongoose.Schema({
     
     // Pricing
     pricing: {
+        unitPrice: Number,
         costPrice: Number,
         retailPrice: Number,
         controlPrice: Number

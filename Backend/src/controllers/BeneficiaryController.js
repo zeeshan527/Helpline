@@ -10,21 +10,23 @@ const mongoose = require("mongoose");
  * @route POST /api/beneficiaries
  */
 exports.create = asyncHandler(async (req, res) => {
+    console.log('Creating beneficiary with data:', req.body);   
     // Validate and sanitize input data
     const beneficiaryData = {
         ...req.body,
         createdBy: req.user._id
     };
 
+ 
     // Validate family counts
     if (beneficiaryData.family) {
         beneficiaryData.family.totalMembers = parseInt(beneficiaryData.family.totalMembers) || 1;
         beneficiaryData.family.schoolGoingChildren = parseInt(beneficiaryData.family.schoolGoingChildren) || 0;
         beneficiaryData.family.elderlyCount = parseInt(beneficiaryData.family.elderlyCount) || 0;
         beneficiaryData.family.disabledCount = parseInt(beneficiaryData.family.disabledCount) || 0;
-
         // Validate that family counts make sense
         const { totalMembers, schoolGoingChildren, elderlyCount, disabledCount } = beneficiaryData.family;
+
         if (schoolGoingChildren + elderlyCount + disabledCount > totalMembers) {
             throw new AppError('Sum of school children, elderly, and disabled cannot exceed total family members', 400);
         }

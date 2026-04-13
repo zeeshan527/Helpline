@@ -55,4 +55,12 @@ router.put("/:id",
     c.update
 );
 
+router.delete("/:id",
+    auth,
+    requireRole(['admin', 'master_inventory_manager', 'location_inventory_manager']),
+    requirePermission(PERMISSIONS.STOCK_IN.DELETE),
+    stockInValidators.getById,
+    c.delete
+);
+
 module.exports = router;

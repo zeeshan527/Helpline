@@ -141,7 +141,7 @@ export default function StockIn() {
     setValue('category', item.product?.category || '')
     setValue('quantity', item.quantity || '')
     setValue('unit', item.product?.unit || 'piece')
-    setValue('unitPrice', item.pricing?.unitPrice || '')
+    setValue('unitPrice', item.pricing?.unitPrice || item.pricing?.costPrice || '')
     setValue('sourceType', item.source?.type || 'donor')
     setValue('sourceReference', item.source?.referenceId || '')
     setValue('companyName', item.source?.companyName || '')
@@ -290,7 +290,7 @@ const locationOptions = useMemo(() => {
     { value: 'liter', label: 'Liter' },
     { value: 'ml', label: 'Milliliter (ml)' },
     { value: 'box', label: 'Box' },
-    { value: 'pack', label: 'Pack' },
+    { value: 'packet', label: 'Packet' },
     { value: 'bag', label: 'Bag' },
     { value: 'carton', label: 'Carton' }, 
   ]
@@ -395,7 +395,7 @@ const locationOptions = useMemo(() => {
                         <div>
                           <div className="font-medium text-gray-900">{item.product?.name}</div>
                           <div className="text-sm text-gray-500">
-                            Rs. {(item.pricing?.unitPrice || 0).toLocaleString()} / {item.product?.unit}
+                            Rs. {(item.pricing?.unitPrice || item.pricing?.costPrice || 0).toLocaleString()} / {item.product?.unit}
                           </div>
                         </div>
                       </div>
@@ -702,7 +702,7 @@ const locationOptions = useMemo(() => {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Unit Price</p>
-                <p className="font-medium">Rs. {(viewModal.data.pricing?.unitPrice || 0).toLocaleString()}</p>
+                <p className="font-medium">Rs. {(viewModal.data.pricing?.unitPrice || viewModal.data.pricing?.costPrice || 0).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Source Type</p>
