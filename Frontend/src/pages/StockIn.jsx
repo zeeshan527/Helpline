@@ -143,7 +143,7 @@ export default function StockIn() {
     setValue('unit', item.product?.unit || 'piece')
     setValue('unitPrice', item.pricing?.unitPrice || item.pricing?.costPrice || '')
     setValue('sourceType', item.source?.type || 'donor')
-    setValue('sourceReference', item.source?.referenceId || '')
+    setValue('sourceReference', item.source?.referenceId?._id || item.source?.referenceId || '')
     setValue('companyName', item.source?.companyName || '')
     setValue('location', item.locationId?._id || '')
     setValue('distributionPolicy', item.distributionPolicy?.type || 'flexible')
@@ -411,8 +411,8 @@ const locationOptions = useMemo(() => {
                     </TableCell>
                     <TableCell>
                       <div className="capitalize">{item.source?.type}</div>
-                      {item.source?.type === 'donor' && item.source?.donor && (
-                        <div className="text-sm text-gray-500">{item.source.donor.name}</div>
+                      {item.source?.type === 'donor' && item.source?.referenceId && (
+                        <div className="text-sm text-gray-500">{item.source?.referenceId?.name}</div>
                       )}
                     </TableCell>
                     <TableCell>{item.locationId?.name || 'N/A'}</TableCell>
