@@ -94,8 +94,8 @@ export const stockInAPI = {
   update: (id, data) => api.put(`/stock-in/${id}`, data),
   delete: (id) => api.delete(`/stock-in/${id}`),
   transfer: (id, data) => api.post(`/stock-in/${id}/transfer`, data),
-  getStats: () => api.get('/stock-in/stats/overview'),
-  getCategories: () => api.get('/stock-in/categories/list'),
+  getStats: () => api.get('/stock-in/stats'),
+  getCategories: () => api.get('/stock-in/categories'),
 }
 
 // Stock Out API

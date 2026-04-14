@@ -200,19 +200,40 @@ const locationValidators = {
 // Stock In Validators
 const stockInValidators = {
     create: [
+        body('recordType')
+            .optional()
+            .isIn(['stock', 'package']).withMessage('Invalid record type'),
+        body('package.name')
+            .if(body('recordType').equals('package'))
+            .trim()
+            .notEmpty().withMessage('Package name is required'),
+        body('package.items')
+            .if(body('recordType').equals('package'))
+            .isArray({ min: 1 }).withMessage('At least one product is required in a package'),
+        body('package.items.*.stockInId')
+            .if(body('recordType').equals('package'))
+            .isMongoId().withMessage('Invalid stock item ID in package'),
+        body('package.items.*.quantity')
+            .if(body('recordType').equals('package'))
+            .isInt({ min: 1 }).withMessage('Package item quantity must be at least 1'),
         body('product.name')
+            .if(body('recordType').not().equals('package'))
             .trim()
             .notEmpty().withMessage('Product name is required'),
         body('product.category')
+            .if(body('recordType').not().equals('package'))
             .trim()
             .notEmpty().withMessage('Product category is required'),
         body('product.unit')
+            .if(body('recordType').not().equals('package'))
             .notEmpty().withMessage('Product unit is required')
             .isIn(Object.values(PRODUCT_UNITS)).withMessage('Invalid product unit'),
         body('quantity')
+            .if(body('recordType').not().equals('package'))
             .notEmpty().withMessage('Quantity is required')
             .isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
         body('source.type')
+            .if(body('recordType').not().equals('package'))
             .notEmpty().withMessage('Source type is required')
             .isIn(Object.values(SOURCE_TYPES)).withMessage('Invalid source type'),
         body('source.referenceId')

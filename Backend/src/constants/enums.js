@@ -15,7 +15,8 @@ const DISTRIBUTION_MODES = {
 const SOURCE_TYPES = {
     DONOR: 'donor',
     COMPANY: 'company',
-    PURCHASE: 'purchase'
+    PURCHASE: 'purchase',
+    PACKAGE: 'package'
 };
 
 const LOCATION_TYPES = {
@@ -86,8 +87,8 @@ const PRODUCT_UNITS = {
     BOX: 'box',
     PACKET: 'packet',
     BAG: 'bag',
-    BAG: 'bag',
-    CARTON: 'carton'
+    CARTON: 'carton',
+    PACKAGE: 'package'
 };
 
 const VIOLATION_TYPES = {

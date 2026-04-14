@@ -1,19 +1,23 @@
-import { useState, useEffect } from 'react'
-import { stockOutAPI, stockInAPI, beneficiariesAPI, locationsAPI } from '../services/api'
-import { useToast } from '../context/ToastContext'
-import Card from '../components/common/Card'
-import Button from '../components/common/Button'
-import SearchInput from '../components/common/SearchInput'
-import Pagination from '../components/common/Pagination'
-import Modal from '../components/common/Modal'
-import ConfirmDialog from '../components/common/ConfirmDialog'
-import { PageLoading, EmptyState } from '../components/common/LoadingState'
-import { StatusBadge } from '../components/common/Badge'
-import Table, { TableHead, TableBody, TableRow, TableCell, TableHeaderCell } from '../components/common/Table'
-import { useForm } from 'react-hook-form'
-import Input from '../components/common/Input'
-import Select from '../components/common/Select'
-import Textarea from '../components/common/Textarea'
+import { useAuth } from "../context/AuthContext";
+import { useStockOut } from "../hooks/useStockOut";
+import Card from "../components/common/Card";
+import Button from "../components/common/Button";
+import SearchInput from "../components/common/SearchInput";
+import Pagination from "../components/common/Pagination";
+import Modal from "../components/common/Modal";
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import { PageLoading, EmptyState } from "../components/common/LoadingState";
+import { StatusBadge } from "../components/common/Badge";
+import Table, {
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHeaderCell,
+} from "../components/common/Table";
+import Input from "../components/common/Input";
+import Select from "../components/common/Select";
+import Textarea from "../components/common/Textarea";
 import {
   Plus,
   Eye,
@@ -22,209 +26,72 @@ import {
   User,
   Package,
   AlertTriangle,
-} from 'lucide-react'
-import { format } from 'date-fns'
+} from "lucide-react";
+import { format } from "date-fns";
 
 export default function StockOut() {
-  const [stockOutItems, setStockOutItems] = useState([])
-  const [stockInItems, setStockInItems] = useState([])
-  const [beneficiaries, setBeneficiaries] = useState([])
-  const [locations, setLocations] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 0,
-  })
-  const [search, setSearch] = useState('')
-  const [modeFilter, setModeFilter] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [cancelDialog, setCancelDialog] = useState({ open: false, id: null })
-  const [viewModal, setViewModal] = useState({ open: false, data: null })
-  const [submitting, setSubmitting] = useState(false)
-  const [selectedStockIn, setSelectedStockIn] = useState(null)
-  
-  const { success, error: showError } = useToast()
-  const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm()
+  const { user } = useAuth();
+  const {
+    stockOutItems,
+    loading,
+    pagination,
+    search,
+    modeFilter,
+    recordTypeFilter,
+    modalOpen,
+    cancelDialog,
+    viewModal,
+    submitting,
+    selectedStockIn,
+    errors,
+    watchMode,
+    register,
+    handleSubmit,
+    setPagination,
+    setSearch,
+    setModeFilter,
+    setRecordTypeFilter,
+    setModalOpen,
+    setCancelDialog,
+    setViewModal,
+    openCreateModal,
+    onSubmit,
+    handleCancel,
+    viewStockOut,
+    stockInOptions,
+    beneficiaryOptions,
+    modeOptions,
+    recordTypeOptions,
+  } = useStockOut();
 
-  const watchStockIn = watch('stockIn')
-  const watchMode = watch('distributionMode')
-
-  useEffect(() => {
-    fetchStockOutItems()
-    fetchStockInItems()
-    fetchBeneficiaries()
-    fetchLocations()
-  }, [pagination.page, search, modeFilter])
-
-  useEffect(() => {
-    if (watchStockIn) {
-      const item = stockInItems.find(s => s._id === watchStockIn)
-      setSelectedStockIn(item)
-    } else {
-      setSelectedStockIn(null)
-    }
-  }, [watchStockIn, stockInItems])
-
-  const fetchStockOutItems = async () => {
-    try {
-      setLoading(true)
-      const params = {
-        page: pagination.page,
-        limit: pagination.limit,
-        ...(search && { search }),
-        ...(modeFilter && { distributionMode: modeFilter }),
-      }
-      const response = await stockOutAPI.getAll(params)
-      setStockOutItems(response.data.data)
-      setPagination(prev => ({
-        ...prev,
-        total: response.data.pagination?.total || 0,
-        totalPages: response.data.pagination?.pages || 1,
-      }))
-    } catch (err) {
-      showError('Failed to fetch stock out items')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchStockInItems = async () => {
-    try {
-      const response = await stockInAPI.getAll({ limit: 100, hasStock: true })
-      setStockInItems(response.data.data || [])
-    } catch (err) {
-      console.error('Failed to fetch stock items')
-    }
-  }
-
-  const fetchBeneficiaries = async () => {
-    try {
-      const response = await beneficiariesAPI.getAll({ limit: 20, status: 'approved' })
-      setBeneficiaries(response.data.data || [])
-    } catch (err) {
-      console.error('Failed to fetch beneficiaries')
-    }
-  }
-
-  const fetchLocations = async () => {
-    try {
-      const response = await locationsAPI.getAll({ limit: 100 })
-      setLocations(response.data.data || [])
-    } catch (err) {
-      console.error('Failed to fetch locations')
-    }
-  }
-
-  const openCreateModal = () => {
-    reset({
-      stockIn: '',
-      beneficiary: '',
-      quantity: '',
-      distributionMode: 'free',
-      priceApplied: '',
-      discountPercent: '',
-      notes: '',
-    })
-    setSelectedStockIn(null)
-    setModalOpen(true)
-  }
-
-  const onSubmit = async (data) => {
-    try {
-      setSubmitting(true)
-      const payload = {
-        stockInId: data.stockIn,
-        beneficiaryId: data.beneficiary,
-        locationId: selectedStockIn?.locationId?._id || selectedStockIn?.locationId || selectedStockIn?.location?._id || selectedStockIn?.location,
-        quantity: parseInt(data.quantity),
-        distribution: {
-          mode: data.distributionMode,
-          price: data.distributionMode === 'free' ? 0 : parseFloat(data.priceApplied) || 0,
-          ...(data.distributionMode === 'discounted' && { discountPercent: parseFloat(data.discountPercent) || 0 }),
-          ...(data.distributionMode === 'discounted' && { originalPrice: parseFloat(data.priceApplied) || 0 }),
-        },
-        ...(data.notes && { notes: data.notes }),
-      }
-
-      await stockOutAPI.create(payload)
-      success('Stock distributed successfully')
-      setModalOpen(false)
-      fetchStockOutItems()
-      fetchStockInItems()
-    } catch (err) {
-      showError(err.response?.data?.message || 'Distribution failed')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleCancel = async () => {
-    try {
-      await stockOutAPI.cancel(cancelDialog.id, 'Cancelled by user')
-      success('Distribution cancelled successfully')
-      setCancelDialog({ open: false, id: null })
-      fetchStockOutItems()
-      fetchStockInItems()
-    } catch (err) {
-      showError(err.response?.data?.message || 'Failed to cancel')
-    }
-  }
-
-  const viewStockOut = async (id) => {
-    try {
-      const response = await stockOutAPI.getById(id)
-      setViewModal({ open: true, data: response.data.data })
-    } catch (err) {
-      showError('Failed to fetch distribution details')
-    }
-  }
-
-  const stockInOptions = stockInItems
-    .filter(item => (item.remainingQuantity || item.quantity) > 0)
-    .map(item => ({
-      value: item._id,
-      label: `${item.product?.name} - ${item.remainingQuantity || item.quantity} ${item.product?.unit} (${item.location?.name || 'N/A'})`,
-    }))
-
-  const beneficiaryOptions = beneficiaries.map(b => ({
-    value: b._id,
-    label: `${b?.basicInfo?.headOfFamilyName || b.name || 'Unknown'} (${b?.basicInfo?.cnic || b.cnic || 'N/A'})`,
-  }))
-
-  const modeOptions = [
-    { value: 'free', label: 'Free' },
-    { value: 'control_price', label: 'Control Price' },
-    { value: 'discounted', label: 'Discounted' },
-  ]
+  if (!user) return null;
 
   const getModeBadge = (mode) => {
     const colors = {
-      free: 'badge-success',
-      control_price: 'badge-warning',
-      discounted: 'badge-primary',
-    }
+      free: "badge-success",
+      control_price: "badge-warning",
+      discounted: "badge-primary",
+    };
     const labels = {
-      free: 'Free',
-      control_price: 'Control Price',
-      discounted: 'Discounted',
-    }
+      free: "Free",
+      control_price: "Control Price",
+      discounted: "Discounted",
+    };
     return (
-      <span className={`badge ${colors[mode] || 'badge-gray'}`}>
+      <span className={`badge ${colors[mode] || "badge-gray"}`}>
         {labels[mode] || mode}
       </span>
-    )
-  }
+    );
+  };
 
   const isDistributionModeAllowed = (mode) => {
-    if (!selectedStockIn) return true
-    const policy = selectedStockIn.distributionPolicy?.type
+    if (!selectedStockIn) return true;
+    const policy = selectedStockIn.distributionPolicy?.type;
 
-    if (policy === 'free_only') return mode === 'free'
-    if (policy === 'control_price') return mode === 'control_price'
-    return true
-  }
+    if (policy === "free_only") return mode === "free";
+    if (policy === "control_price") return mode === "control_price";
+    return true;
+  };
 
   return (
     <div className="space-y-6">
@@ -247,6 +114,12 @@ export default function StockOut() {
             onChange={setSearch}
             placeholder="Search by product or beneficiary..."
             className="flex-1"
+          />
+          <Select
+            options={recordTypeOptions}
+            value={recordTypeFilter}
+            onChange={(e) => setRecordTypeFilter(e.target.value)}
+            className="w-full sm:w-40"
           />
           <Select
             options={modeOptions}
@@ -278,7 +151,9 @@ export default function StockOut() {
             <Table>
               <TableHead>
                 <tr>
-                  <TableHeaderCell>Product</TableHeaderCell>
+                  <TableHeaderCell>
+                    {recordTypeFilter === "package" ? "Package" : "Product"}
+                  </TableHeaderCell>
                   <TableHeaderCell>Beneficiary</TableHeaderCell>
                   <TableHeaderCell>Quantity</TableHeaderCell>
                   <TableHeaderCell>Mode</TableHeaderCell>
@@ -298,10 +173,10 @@ export default function StockOut() {
                         </div>
                         <div>
                           <div className="font-medium text-gray-900">
-                            {item.stockInId?.product?.name || 'N/A'}
+                            {item.stockInId?.product?.name || "N/A"}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {item.locationId?.name || 'N/A'}
+                            {item.locationId?.name || "N/A"}
                           </div>
                         </div>
                       </div>
@@ -309,27 +184,36 @@ export default function StockOut() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <User size={14} className="text-gray-400" />
-                        <span>{item.beneficiaryId?.basicInfo?.headOfFamilyName ||  'N/A'}</span>
+                        <span>
+                          {item.beneficiaryId?.basicInfo?.headOfFamilyName ||
+                            "N/A"}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      {item.quantity} {item.stockIn?.product?.unit || 'units'}
-                    </TableCell>
-                    <TableCell>{getModeBadge(item.distribution?.mode)}</TableCell>
-                    <TableCell>
-                      {item.distribution?.mode === 'free' 
-                        ? '-' 
-                        : `Rs. ${(item.revenue || (item.distribution?.price || 0) * item.quantity || 0).toLocaleString()}`
-                      }
+                      {item.quantity} {item.stockInId?.product?.unit || "units"}
                     </TableCell>
                     <TableCell>
-                      {item.createdAt ? format(new Date(item.createdAt), 'MMM dd, yyyy') : 'N/A'}
+                      {getModeBadge(item.distribution?.mode)}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={item.status || 'completed'} />
+                      {item.distribution?.mode === "free"
+                        ? "-"
+                        : `Rs. ${(item.revenue || (item.distribution?.price || 0) * item.quantity || 0).toLocaleString()}`}
+                    </TableCell>
+                    <TableCell>
+                      {item.createdAt
+                        ? format(new Date(item.createdAt), "MMM dd, yyyy")
+                        : "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={item.status || "completed"} />
                       {item.violation?.hasViolation && (
                         <span className="ml-2">
-                          <AlertTriangle size={14} className="text-danger-500 inline" />
+                          <AlertTriangle
+                            size={14}
+                            className="text-danger-500 inline"
+                          />
                         </span>
                       )}
                     </TableCell>
@@ -342,9 +226,11 @@ export default function StockOut() {
                         >
                           <Eye size={16} className="text-gray-600" />
                         </button>
-                        {item.status !== 'cancelled' && (
+                        {item.status !== "cancelled" && (
                           <button
-                            onClick={() => setCancelDialog({ open: true, id: item._id })}
+                            onClick={() =>
+                              setCancelDialog({ open: true, id: item._id })
+                            }
                             className="p-1 hover:bg-gray-100 rounded"
                             title="Cancel"
                           >
@@ -362,7 +248,9 @@ export default function StockOut() {
               totalPages={pagination.totalPages}
               totalItems={pagination.total}
               itemsPerPage={pagination.limit}
-              onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+              onPageChange={(page) =>
+                setPagination((prev) => ({ ...prev, page }))
+              }
             />
           </>
         )}
@@ -381,35 +269,47 @@ export default function StockOut() {
             options={stockInOptions}
             placeholder="Select stock item"
             error={errors.stockIn?.message}
-            {...register('stockIn', { required: 'Stock item is required' })}
+            {...register("stockIn", { required: "Stock item is required" })}
           />
 
           {selectedStockIn && (
             <div className="p-4 bg-gray-50 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Stock Item Details</h4>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                Stock Item Details
+              </h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-500">Available: </span>
                   <span className="font-medium">
-                    {selectedStockIn.remainingQuantity || selectedStockIn.quantity} {selectedStockIn.product?.unit}
+                    {selectedStockIn.remainingQuantity ||
+                      selectedStockIn.quantity}{" "}
+                    {selectedStockIn.product?.unit}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-500">Unit Price: </span>
                   <span className="font-medium">
-                    Rs. {(selectedStockIn.pricing?.unitPrice || 0).toLocaleString()}
+                    Rs.{" "}
+                    {(selectedStockIn.pricing?.unitPrice || 0).toLocaleString()}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-500">Policy: </span>
-                  {getModeBadge(selectedStockIn.distributionPolicy?.type === 'free_only' ? 'free' : 
-                    selectedStockIn.distributionPolicy?.type === 'control_price' ? 'control_price' : 'discounted')}
+                  {getModeBadge(
+                    selectedStockIn.distributionPolicy?.type === "free_only"
+                      ? "free"
+                      : selectedStockIn.distributionPolicy?.type ===
+                          "control_price"
+                        ? "control_price"
+                        : "discounted",
+                  )}
                 </div>
                 {selectedStockIn.distributionPolicy?.controlPrice && (
                   <div>
                     <span className="text-gray-500">Control Price: </span>
                     <span className="font-medium">
-                      Rs. {selectedStockIn.distributionPolicy.controlPrice.toLocaleString()}
+                      Rs.{" "}
+                      {selectedStockIn.distributionPolicy.controlPrice.toLocaleString()}
                     </span>
                   </div>
                 )}
@@ -422,7 +322,9 @@ export default function StockOut() {
             options={beneficiaryOptions}
             placeholder="Select beneficiary"
             error={errors.beneficiary?.message}
-            {...register('beneficiary', { required: 'Beneficiary is required' })}
+            {...register("beneficiary", {
+              required: "Beneficiary is required",
+            })}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -430,27 +332,38 @@ export default function StockOut() {
               label="Quantity *"
               type="number"
               min="1"
-              max={selectedStockIn?.remainingQuantity || selectedStockIn?.quantity || 999999}
+              max={
+                selectedStockIn?.remainingQuantity ||
+                selectedStockIn?.quantity ||
+                999999
+              }
               placeholder="Enter quantity"
               error={errors.quantity?.message}
-              {...register('quantity', { 
-                required: 'Quantity is required', 
-                min: { value: 1, message: 'Minimum 1' },
-                max: { 
-                  value: selectedStockIn?.remainingQuantity || selectedStockIn?.quantity || 999999,
-                  message: 'Exceeds available quantity'
-                }
+              {...register("quantity", {
+                required: "Quantity is required",
+                min: { value: 1, message: "Minimum 1" },
+                max: {
+                  value:
+                    selectedStockIn?.remainingQuantity ||
+                    selectedStockIn?.quantity ||
+                    999999,
+                  message: "Exceeds available quantity",
+                },
               })}
             />
             <Select
               label="Distribution Mode *"
-              options={modeOptions.filter(opt => isDistributionModeAllowed(opt.value))}
+              options={modeOptions.filter((opt) =>
+                isDistributionModeAllowed(opt.value),
+              )}
               error={errors.distributionMode?.message}
-              {...register('distributionMode', { required: 'Mode is required' })}
+              {...register("distributionMode", {
+                required: "Mode is required",
+              })}
             />
           </div>
 
-          {watchMode && watchMode !== 'free' && (
+          {watchMode && watchMode !== "free" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="Price Applied (Rs.) *"
@@ -459,18 +372,21 @@ export default function StockOut() {
                 step="0.01"
                 placeholder="Enter price"
                 error={errors.priceApplied?.message}
-                {...register('priceApplied', { 
-                  required: watchMode !== 'free' ? 'Price is required' : false 
+                {...register("priceApplied", {
+                  required: watchMode !== "free" ? "Price is required" : false,
                 })}
               />
-              {watchMode === 'discounted' && (
+              {watchMode === "discounted" && (
                 <Input
                   label="Discount (%)"
                   type="number"
                   min="0"
-                  max={selectedStockIn?.distributionPolicy?.maxDiscountPercent || 100}
+                  max={
+                    selectedStockIn?.distributionPolicy?.maxDiscountPercent ||
+                    100
+                  }
                   placeholder="Enter discount percentage"
-                  {...register('discountPercent')}
+                  {...register("discountPercent")}
                 />
               )}
             </div>
@@ -480,11 +396,15 @@ export default function StockOut() {
             label="Notes"
             placeholder="Additional notes..."
             rows={2}
-            {...register('notes')}
+            {...register("notes")}
           />
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => setModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" loading={submitting}>
@@ -509,10 +429,12 @@ export default function StockOut() {
               </div>
               <div>
                 <h3 className="text-xl font-semibold">
-                  {viewModal.data.stockInId?.product?.name || 'N/A'}
+                  {viewModal.data.stockInId?.product?.name || "N/A"}
                 </h3>
                 <p className="text-gray-500">
-                  Distribution to {viewModal.data.beneficiaryId?.basicInfo?.headOfFamilyName || 'N/A'}
+                  Distribution to{" "}
+                  {viewModal.data.beneficiaryId?.basicInfo?.headOfFamilyName ||
+                    "N/A"}
                 </p>
               </div>
             </div>
@@ -520,16 +442,22 @@ export default function StockOut() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-500">Beneficiary</p>
-                <p className="font-medium">{viewModal.data.beneficiaryId?.basicInfo?.headOfFamilyName || 'N/A'}</p>
+                <p className="font-medium">
+                  {viewModal.data.beneficiaryId?.basicInfo?.headOfFamilyName ||
+                    "N/A"}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">CNIC</p>
-                <p className="font-medium">{viewModal.data.beneficiaryId?.basicInfo?.cnic || 'N/A'}</p>
+                <p className="font-medium">
+                  {viewModal.data.beneficiaryId?.basicInfo?.cnic || "N/A"}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Quantity</p>
                 <p className="font-medium">
-                  {viewModal.data.quantity} {viewModal.data.stockInId?.product?.unit || 'units'}
+                  {viewModal.data.quantity}{" "}
+                  {viewModal.data.stockInId?.product?.unit || "units"}
                 </p>
               </div>
               <div>
@@ -539,37 +467,39 @@ export default function StockOut() {
               <div>
                 <p className="text-sm text-gray-500">Price Applied</p>
                 <p className="font-medium">
-                  {viewModal.data.distribution?.mode === 'free' 
-                    ? 'Free' 
-                    : `Rs. ${(viewModal.data.distribution?.price || 0).toLocaleString()}`
-                  }
+                  {viewModal.data.distribution?.mode === "free"
+                    ? "Free"
+                    : `Rs. ${(viewModal.data.distribution?.price || 0).toLocaleString()}`}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Amount</p>
                 <p className="font-medium">
-                  {viewModal.data.distribution?.mode === 'free' 
-                    ? '-' 
-                    : `Rs. ${(viewModal.data.revenue || (viewModal.data.distribution?.price || 0) * viewModal.data.quantity || 0).toLocaleString()}`
-                  }
+                  {viewModal.data.distribution?.mode === "free"
+                    ? "-"
+                    : `Rs. ${(viewModal.data.revenue || (viewModal.data.distribution?.price || 0) * viewModal.data.quantity || 0).toLocaleString()}`}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Location</p>
-                <p className="font-medium">{viewModal.data.locationId?.name || 'N/A'}</p>
+                <p className="font-medium">
+                  {viewModal.data.locationId?.name || "N/A"}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Date</p>
                 <p className="font-medium">
-                  {viewModal.data.createdAt 
-                    ? format(new Date(viewModal.data.createdAt), 'MMM dd, yyyy hh:mm a')
-                    : 'N/A'
-                  }
+                  {viewModal.data.createdAt
+                    ? format(
+                        new Date(viewModal.data.createdAt),
+                        "MMM dd, yyyy hh:mm a",
+                      )
+                    : "N/A"}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Status</p>
-                <StatusBadge status={viewModal.data.status || 'completed'} />
+                <StatusBadge status={viewModal.data.status || "completed"} />
               </div>
             </div>
 
@@ -580,13 +510,18 @@ export default function StockOut() {
                   <span className="font-semibold">Policy Violation</span>
                 </div>
                 <p className="text-sm text-danger-600">
-                  {viewModal.data.violation.reason || 'Distribution policy was violated'}
+                  {viewModal.data.violation.reason ||
+                    "Distribution policy was violated"}
                 </p>
               </div>
             )}
 
             <div className="flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => setViewModal({ open: false, data: null })}>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setViewModal({ open: false, data: null })}
+              >
                 Close
               </Button>
             </div>
@@ -605,5 +540,5 @@ export default function StockOut() {
         variant="warning"
       />
     </div>
-  )
+  );
 }

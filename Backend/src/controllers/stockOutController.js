@@ -218,6 +218,7 @@ exports.get = asyncHandler(async (req, res) => {
         locationId,
         beneficiaryId,
         stockInId,
+        recordType,
         status,
         mode,
         isViolation,
@@ -243,6 +244,24 @@ exports.get = asyncHandler(async (req, res) => {
     if (isViolation === 'true') query.isViolation = true;
     if (isViolation === 'false') query.isViolation = false;
 
+    if (recordType === 'stock' || recordType === 'package') {
+        const stockInTypeQuery = recordType === 'stock'
+            ? { $or: [{ recordType: 'stock' }, { recordType: { $exists: false } }] }
+            : { recordType: 'package' };
+
+        const matchingStockIds = await StockIn.find(stockInTypeQuery).distinct('_id');
+
+        if (query.stockInId) {
+            query.stockInId = matchingStockIds
+                .map((id) => id.toString())
+                .includes(query.stockInId.toString())
+                ? query.stockInId
+                : null;
+        } else {
+            query.stockInId = { $in: matchingStockIds };
+        }
+    }
+
     // Date range filter
     if (startDate || endDate) {
         query.distributionDate = {};
@@ -257,7 +276,7 @@ exports.get = asyncHandler(async (req, res) => {
         StockOut.find(query)
             .populate({
                 path: 'stockInId',
-                select: 'product source distributionPolicy'
+                select: 'product source distributionPolicy recordType'
             })
             .populate('beneficiaryId', 'basicInfo status')
             .populate('locationId', 'name type')
@@ -288,7 +307,7 @@ exports.getById = asyncHandler(async (req, res) => {
     const stockOut = await StockOut.findById(req.params.id)
         .populate({
             path: 'stockInId',
-            select: 'product source distributionPolicy pricing',
+            select: 'product source distributionPolicy pricing recordType',
             populate: { path: 'source.referenceId', select: 'name type' }
         })
         .populate('beneficiaryId', 'basicInfo family income status locationId')

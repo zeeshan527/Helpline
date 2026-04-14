@@ -1,6 +1,12 @@
 const mongoose = require("mongoose");
 
 const stockInSchema = new mongoose.Schema({
+    recordType: {
+        type: String,
+        enum: ['stock', 'package'],
+        default: 'stock'
+    },
+
     // Product Information
     product: {
         name: {
@@ -15,7 +21,7 @@ const stockInSchema = new mongoose.Schema({
         unit: {
             type: String,
             required: [true, 'Unit is required'],
-            enum: ['piece', 'kg', 'g', 'liter', 'ml', 'box', 'packet', 'bag', 'carton']
+            enum: ['piece', 'kg', 'g', 'liter', 'ml', 'box', 'packet', 'bag', 'carton', 'package']
         },
         description: String,
         sku: String,
@@ -38,7 +44,7 @@ const stockInSchema = new mongoose.Schema({
     source: {
         type: {
             type: String,
-            enum: ['donor', 'company', 'purchase'],
+            enum: ['donor', 'company', 'purchase', 'package'],
             required: [true, 'Source type is required']
         },
         referenceId: {
@@ -126,6 +132,37 @@ const stockInSchema = new mongoose.Schema({
     // Batch/Lot tracking
     batchNumber: String,
     lotNumber: String,
+
+    package: {
+        name: String,
+        totalProducts: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
+        totalQuantity: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
+        items: [{
+            stockInId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'StockIn'
+            },
+            productName: String,
+            quantity: {
+                type: Number,
+                min: 1
+            },
+            unit: String,
+            availableQuantity: Number,
+            locationId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Location'
+            }
+        }]
+    },
     
     // Notes and custom fields
     notes: String,
@@ -150,6 +187,21 @@ const stockInSchema = new mongoose.Schema({
 stockInSchema.pre('save', function(next) {
     if (this.isNew) {
         this.remainingQuantity = this.quantity;
+    }
+
+    if (this.recordType === 'package') {
+        if (!this.product?.category) {
+            this.product = this.product || {};
+            this.product.category = 'package';
+        }
+        if (!this.product?.unit) {
+            this.product = this.product || {};
+            this.product.unit = 'package';
+        }
+        if (this.package) {
+            this.package.totalProducts = this.package.items?.length || 0;
+            this.package.totalQuantity = this.package.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+        }
     }
     
     // Validate distribution policy
