@@ -22,7 +22,8 @@ import {
   Plus,
   Eye,
   PackageMinus,
-  XCircle,
+  Edit2,
+  Trash2,
   User,
   Package,
   AlertTriangle,
@@ -39,10 +40,12 @@ export default function StockOut() {
     modeFilter,
     recordTypeFilter,
     modalOpen,
-    cancelDialog,
+    editingId,
+    deleteDialog,
     viewModal,
     submitting,
     selectedStockIn,
+    selectedStockInAvailableQuantity,
     errors,
     watchMode,
     register,
@@ -51,12 +54,13 @@ export default function StockOut() {
     setSearch,
     setModeFilter,
     setRecordTypeFilter,
-    setModalOpen,
-    setCancelDialog,
+    closeModal,
+    setDeleteDialog,
     setViewModal,
     openCreateModal,
+    openEditModal,
     onSubmit,
-    handleCancel,
+    handleDeleteDistribution,
     viewStockOut,
     stockInOptions,
     beneficiaryOptions,
@@ -226,17 +230,22 @@ export default function StockOut() {
                         >
                           <Eye size={16} className="text-gray-600" />
                         </button>
-                        {item.status !== "cancelled" && (
-                          <button
-                            onClick={() =>
-                              setCancelDialog({ open: true, id: item._id })
-                            }
-                            className="p-1 hover:bg-gray-100 rounded"
-                            title="Cancel"
-                          >
-                            <XCircle size={16} className="text-danger-600" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => openEditModal(item)}
+                          className="p-1 hover:bg-gray-100 rounded"
+                          title="Edit"
+                        >
+                          <Edit2 size={16} className="text-primary-600" />
+                        </button>
+                        <button
+                          onClick={() =>
+                            setDeleteDialog({ open: true, id: item._id })
+                          }
+                          className="p-1 hover:bg-gray-100 rounded"
+                          title="Delete"
+                        >
+                          <Trash2 size={16} className="text-danger-600" />
+                        </button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -259,8 +268,8 @@ export default function StockOut() {
       {/* Create Modal */}
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="New Distribution"
+        onClose={closeModal}
+        title={editingId ? "Edit Distribution" : "New Distribution"}
         size="lg"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -333,8 +342,7 @@ export default function StockOut() {
               type="number"
               min="1"
               max={
-                selectedStockIn?.remainingQuantity ||
-                selectedStockIn?.quantity ||
+                selectedStockInAvailableQuantity ||
                 999999
               }
               placeholder="Enter quantity"
@@ -344,8 +352,7 @@ export default function StockOut() {
                 min: { value: 1, message: "Minimum 1" },
                 max: {
                   value:
-                    selectedStockIn?.remainingQuantity ||
-                    selectedStockIn?.quantity ||
+                    selectedStockInAvailableQuantity ||
                     999999,
                   message: "Exceeds available quantity",
                 },
@@ -403,12 +410,12 @@ export default function StockOut() {
             <Button
               variant="secondary"
               type="button"
-              onClick={() => setModalOpen(false)}
+              onClick={closeModal}
             >
               Cancel
             </Button>
             <Button type="submit" loading={submitting}>
-              Distribute
+              {editingId ? "Update Distribution" : "Distribute"}
             </Button>
           </div>
         </form>
@@ -529,14 +536,14 @@ export default function StockOut() {
         )}
       </Modal>
 
-      {/* Cancel Confirmation */}
+      {/* Delete Confirmation */}
       <ConfirmDialog
-        isOpen={cancelDialog.open}
-        onClose={() => setCancelDialog({ open: false, id: null })}
-        onConfirm={handleCancel}
-        title="Cancel Distribution"
-        message="Are you sure you want to cancel this distribution? The stock will be returned to inventory."
-        confirmText="Cancel Distribution"
+        isOpen={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, id: null })}
+        onConfirm={handleDeleteDistribution}
+        title="Delete Distribution"
+        message="Are you sure you want to delete this distribution? The quantity will be returned to stock in."
+        confirmText="Delete Distribution"
         variant="warning"
       />
     </div>

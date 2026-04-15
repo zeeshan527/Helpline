@@ -39,13 +39,22 @@ router.get("/:id",
     c.getById
 );
 
-// Cancel/Return distribution
-router.patch("/:id/cancel", 
+// Update distribution
+router.put("/:id",
+    auth,
+    requireRole(['admin', 'master_inventory_manager', 'location_inventory_manager']),
+    requirePermission(PERMISSIONS.STOCK_OUT.UPDATE),
+    stockOutValidators.update,
+    c.update
+);
+
+// Delete distribution and return stock
+router.delete("/:id", 
     auth, 
     requireRole(['admin', 'master_inventory_manager', 'location_inventory_manager']),
     requirePermission(PERMISSIONS.STOCK_OUT.UPDATE),
     stockOutValidators.getById, 
-    c.cancel
+    c.deleteDistribution
 );
 
 module.exports = router;

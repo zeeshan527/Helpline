@@ -42,7 +42,9 @@ export function useStockOut() {
   const [modeFilter, setModeFilter] = useState('')
   const [recordTypeFilter, setRecordTypeFilter] = useState('stock')
   const [modalOpen, setModalOpen] = useState(false)
-  const [cancelDialog, setCancelDialog] = useState({ open: false, id: null })
+  const [editingId, setEditingId] = useState(null)
+  const [editingRecord, setEditingRecord] = useState(null)
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null })
   const [viewModal, setViewModal] = useState({ open: false, data: null })
   const [submitting, setSubmitting] = useState(false)
   const [selectedStockIn, setSelectedStockIn] = useState(null)
@@ -88,7 +90,6 @@ export function useStockOut() {
     try {
       const response = await stockInAPI.getAll({
         limit: 100,
-        status: 'active',
         recordType: recordTypeFilter,
       })
       setStockInItems(response.data.data || [])
@@ -138,10 +139,52 @@ export function useStockOut() {
   }, [watchStockIn, stockInItems])
 
   const openCreateModal = useCallback(() => {
+    setEditingId(null)
+    setEditingRecord(null)
     reset(initialValues)
     setSelectedStockIn(null)
     setModalOpen(true)
   }, [reset])
+
+  const openEditModal = useCallback((item) => {
+    setEditingId(item._id)
+    setEditingRecord(item)
+    reset({
+      stockIn: item.stockInId?._id || item.stockInId || '',
+      beneficiary: item.beneficiaryId?._id || item.beneficiaryId || '',
+      quantity: item.quantity || '',
+      distributionMode: item.distribution?.mode || 'free',
+      priceApplied:
+        item.distribution?.mode === 'discounted'
+          ? (item.distribution?.originalPrice ?? item.distribution?.price ?? '')
+          : (item.distribution?.price ?? ''),
+      discountPercent: item.distribution?.discountPercent ?? '',
+      notes: item.notes || '',
+    })
+    setModalOpen(true)
+  }, [reset])
+
+  const closeModal = useCallback(() => {
+    setModalOpen(false)
+    setEditingId(null)
+    setEditingRecord(null)
+    reset(initialValues)
+    setSelectedStockIn(null)
+  }, [reset])
+
+  const selectedStockInAvailableQuantity = useMemo(() => {
+    if (!selectedStockIn) return 0
+
+    const base = selectedStockIn.remainingQuantity || selectedStockIn.quantity || 0
+    const selectedId = selectedStockIn._id
+    const editingStockInId = editingRecord?.stockInId?._id || editingRecord?.stockInId
+
+    if (editingId && editingStockInId && String(selectedId) === String(editingStockInId)) {
+      return base + (editingRecord?.quantity || 0)
+    }
+
+    return base
+  }, [selectedStockIn, editingId, editingRecord])
 
   const onSubmit = useCallback(async (data) => {
     try {
@@ -160,9 +203,15 @@ export function useStockOut() {
         ...(data.notes && { notes: data.notes }),
       }
 
-      await stockOutAPI.create(payload)
-      success('Stock distributed successfully')
-      setModalOpen(false)
+      if (editingId) {
+        await stockOutAPI.update(editingId, payload)
+        success('Distribution updated successfully')
+      } else {
+        await stockOutAPI.create(payload)
+        success('Stock distributed successfully')
+      }
+
+      closeModal()
       fetchStockOutItems()
       fetchStockInItems()
     } catch (error) {
@@ -170,19 +219,19 @@ export function useStockOut() {
     } finally {
       setSubmitting(false)
     }
-  }, [fetchStockInItems, fetchStockOutItems, selectedStockIn, showError, success])
+  }, [editingId, closeModal, fetchStockInItems, fetchStockOutItems, selectedStockIn, showError, success])
 
-  const handleCancel = useCallback(async () => {
+  const handleDeleteDistribution = useCallback(async () => {
     try {
-      await stockOutAPI.cancel(cancelDialog.id, 'Cancelled by user')
-      success('Distribution cancelled successfully')
-      setCancelDialog({ open: false, id: null })
+      await stockOutAPI.delete(deleteDialog.id)
+      success('Distribution deleted successfully')
+      setDeleteDialog({ open: false, id: null })
       fetchStockOutItems()
       fetchStockInItems()
     } catch (error) {
-      showError(error.response?.data?.message || 'Failed to cancel')
+      showError(error.response?.data?.message || 'Failed to delete')
     }
-  }, [cancelDialog.id, fetchStockInItems, fetchStockOutItems, showError, success])
+  }, [deleteDialog.id, fetchStockInItems, fetchStockOutItems, showError, success])
 
   const viewStockOut = useCallback(async (id) => {
     try {
@@ -193,12 +242,25 @@ export function useStockOut() {
     }
   }, [showError])
 
-  const stockInOptions = useMemo(() => stockInItems
-    .filter((item) => (item.remainingQuantity || item.quantity) > 0)
-    .map((item) => ({
-      value: item._id,
-      label: `${item.product?.name} - ${item.remainingQuantity || item.quantity} ${item.product?.unit} (${item.locationId?.name || item.location?.name || 'N/A'})`,
-    })), [stockInItems])
+  const stockInOptions = useMemo(() => {
+    const editingStockInId = editingRecord?.stockInId?._id || editingRecord?.stockInId
+
+    return stockInItems
+      .map((item) => {
+        const base = item.remainingQuantity || item.quantity || 0
+        const effectiveAvailable =
+          editingId && editingStockInId && String(item._id) === String(editingStockInId)
+            ? base + (editingRecord?.quantity || 0)
+            : base
+
+        return {
+          value: item._id,
+          effectiveAvailable,
+          label: `${item.product?.name} - ${effectiveAvailable} ${item.product?.unit} (${item.locationId?.name || item.location?.name || 'N/A'})`,
+        }
+      })
+      .filter((item) => item.effectiveAvailable > 0)
+  }, [stockInItems, editingId, editingRecord])
 
   const beneficiaryOptions = useMemo(() => beneficiaries.map((beneficiary) => ({
     value: beneficiary._id,
@@ -230,10 +292,12 @@ export function useStockOut() {
     modeFilter,
     recordTypeFilter,
     modalOpen,
-    cancelDialog,
+    editingId,
+    deleteDialog,
     viewModal,
     submitting,
     selectedStockIn,
+    selectedStockInAvailableQuantity,
     errors,
     watchMode,
     register,
@@ -243,12 +307,14 @@ export function useStockOut() {
     setModeFilter,
     setRecordTypeFilter,
     setModalOpen,
-    setCancelDialog,
+    closeModal,
+    setDeleteDialog,
     setViewModal,
     setValue,
     openCreateModal,
+    openEditModal,
     onSubmit,
-    handleCancel,
+    handleDeleteDistribution,
     viewStockOut,
     stockInOptions,
     beneficiaryOptions,

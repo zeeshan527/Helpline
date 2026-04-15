@@ -122,7 +122,8 @@ export const stockOutAPI = {
   getAll: (params) => api.get('/stock-out', { params }),
   getById: (id) => api.get(`/stock-out/${id}`),
   create: (data) => api.post('/stock-out', data),
-  cancel: (id, reason) => api.patch(`/stock-out/${id}/cancel`, { reason }),
+  update: (id, data) => api.put(`/stock-out/${id}`, data),
+  delete: (id) => api.delete(`/stock-out/${id}`),
   getStats: () => api.get('/stock-out/stats/overview'),
 }
 

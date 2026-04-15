@@ -313,6 +313,28 @@ const stockOutValidators = {
     getById: [
         param('id').isMongoId().withMessage('Invalid stock out ID'),
         validate
+    ],
+    update: [
+        param('id').isMongoId().withMessage('Invalid stock out ID'),
+        body('stockInId')
+            .optional()
+            .isMongoId().withMessage('Invalid stock in ID'),
+        body('beneficiaryId')
+            .optional()
+            .isMongoId().withMessage('Invalid beneficiary ID'),
+        body('quantity')
+            .optional()
+            .isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
+        body('distribution.mode')
+            .optional()
+            .isIn(Object.values(DISTRIBUTION_MODES)).withMessage('Invalid distribution mode'),
+        body('distribution.price')
+            .optional()
+            .isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+        body('distribution.discountPercent')
+            .optional()
+            .isFloat({ min: 0, max: 100 }).withMessage('Discount percent must be between 0 and 100'),
+        validate
     ]
 };
 

@@ -207,6 +207,39 @@ async function checkFrequencyEligibility(beneficiaryId, stockInId, frequency) {
     return { eligible: true };
 }
 
+const hasLocationAccess = (req, locationId) => {
+    if (req.user.role !== 'location_inventory_manager') {
+        return true;
+    }
+
+    const assignedLocations = req.user.assignedLocations || [];
+    return assignedLocations.some((loc) => loc.toString() === locationId.toString());
+};
+
+const buildDistributionPayload = (distribution, stockIn) => {
+    const mode = distribution?.mode;
+    if (!mode) {
+        throw new AppError('Distribution mode is required', 400);
+    }
+
+    const payload = { ...distribution };
+
+    if (mode === 'free') {
+        payload.price = 0;
+    } else if (mode === 'control_price') {
+        payload.price = stockIn.distributionPolicy?.controlPrice ?? distribution.price ?? 0;
+        payload.originalPrice = payload.price;
+    } else if (mode === 'discounted') {
+        payload.originalPrice = distribution.originalPrice ?? stockIn.pricing?.retailPrice ?? distribution.price ?? 0;
+        payload.discountPercent = distribution.discountPercent || 0;
+        const discountAmount = (payload.originalPrice * payload.discountPercent) / 100;
+        payload.discountAmount = discountAmount;
+        payload.price = payload.originalPrice - discountAmount;
+    }
+
+    return payload;
+};
+
 /**
  * Get all stock out records with filtering
  * @route GET /api/stock-out
@@ -326,66 +359,209 @@ exports.getById = asyncHandler(async (req, res) => {
 });
 
 /**
- * Cancel/Return a distribution
- * @route PUT /api/stock-out/:id/cancel
+ * Update a distribution
+ * @route PUT /api/stock-out/:id
  */
-exports.cancel = asyncHandler(async (req, res) => {
-    const { reason, returnQuantity } = req.body;
-
+exports.update = asyncHandler(async (req, res) => {
     const stockOut = await StockOut.findById(req.params.id);
     if (!stockOut) {
         throw new AppError('Distribution record not found', 404);
     }
 
     if (stockOut.status !== 'completed') {
-        throw new AppError(`Cannot cancel distribution with status: ${stockOut.status}`, 400);
+        throw new AppError(`Cannot edit distribution with status: ${stockOut.status}`, 400);
     }
 
-    // Return stock to inventory
+    if (!hasLocationAccess(req, stockOut.locationId)) {
+        throw new AppError('Not authorized to edit this distribution', 403);
+    }
+
+    const nextStockInId = req.body.stockInId || stockOut.stockInId;
+    const nextBeneficiaryId = req.body.beneficiaryId || stockOut.beneficiaryId;
+    const nextQuantity = req.body.quantity !== undefined ? parseInt(req.body.quantity, 10) : stockOut.quantity;
+    const nextNotes = req.body.notes !== undefined ? req.body.notes : stockOut.notes;
+
+    const [previousStockIn, nextBeneficiary] = await Promise.all([
+        StockIn.findById(stockOut.stockInId),
+        Beneficiary.findById(nextBeneficiaryId)
+    ]);
+
+    if (!previousStockIn) {
+        throw new AppError('Original stock item not found', 404);
+    }
+
+    if (!nextBeneficiary) {
+        throw new AppError('Beneficiary not found', 404);
+    }
+
+    if (nextBeneficiary.status !== 'approved') {
+        throw new AppError(`Beneficiary status is ${nextBeneficiary.status}. Only approved beneficiaries can receive distributions.`, 400);
+    }
+
+    // Return previously distributed quantity before validating the updated quantity.
+    previousStockIn.remainingQuantity += stockOut.quantity;
+    if (previousStockIn.status === 'depleted') {
+        previousStockIn.status = 'active';
+    }
+    await previousStockIn.save();
+
+    const isSameStockSource = String(nextStockInId) === String(previousStockIn._id);
+    const nextStockIn = isSameStockSource
+        ? previousStockIn
+        : await StockIn.findById(nextStockInId);
+
+    if (!nextStockIn) {
+        previousStockIn.deductStock(stockOut.quantity);
+        await previousStockIn.save();
+        throw new AppError('Selected stock item not found', 404);
+    }
+
+    if (!hasLocationAccess(req, nextStockIn.locationId)) {
+        previousStockIn.deductStock(stockOut.quantity);
+        await previousStockIn.save();
+        throw new AppError('Not authorized for selected stock location', 403);
+    }
+
+    let finalDistribution;
+    try {
+        finalDistribution = buildDistributionPayload(req.body.distribution || stockOut.distribution, nextStockIn);
+
+        if ((nextStockIn.remainingQuantity ?? 0) < nextQuantity) {
+            throw new AppError(`Insufficient stock. Available: ${nextStockIn.remainingQuantity ?? 0}, Requested: ${nextQuantity}`, 400);
+        }
+
+        nextStockIn.deductStock(nextQuantity);
+        await nextStockIn.save();
+    } catch (error) {
+        // Roll back stock restoration if edit fails.
+        previousStockIn.deductStock(stockOut.quantity);
+        await previousStockIn.save();
+        throw error;
+    }
+
+    const previousState = {
+        stockInId: stockOut.stockInId,
+        beneficiaryId: stockOut.beneficiaryId,
+        quantity: stockOut.quantity,
+        distribution: stockOut.distribution,
+        revenue: stockOut.revenue,
+        notes: stockOut.notes
+    };
+
+    const previousBeneficiary = await Beneficiary.findById(stockOut.beneficiaryId);
+    if (previousBeneficiary) {
+        previousBeneficiary.distributionHistory.totalReceived = Math.max(0, (previousBeneficiary.distributionHistory.totalReceived || 0) - stockOut.quantity);
+        previousBeneficiary.distributionHistory.totalValue = Math.max(0, (previousBeneficiary.distributionHistory.totalValue || 0) - (stockOut.revenue || 0));
+        await previousBeneficiary.save();
+    }
+
+    const updatedRevenue = (finalDistribution.price || 0) * nextQuantity;
+
+    nextBeneficiary.distributionHistory.totalReceived = (nextBeneficiary.distributionHistory.totalReceived || 0) + nextQuantity;
+    nextBeneficiary.distributionHistory.totalValue = (nextBeneficiary.distributionHistory.totalValue || 0) + updatedRevenue;
+    nextBeneficiary.distributionHistory.lastDistributionDate = new Date();
+    nextBeneficiary.distributionHistory.lastDistributionItems.push({
+        productName: nextStockIn.product?.name || 'Unknown Item',
+        quantity: nextQuantity,
+        date: new Date()
+    });
+    if (nextBeneficiary.distributionHistory.lastDistributionItems.length > 10) {
+        nextBeneficiary.distributionHistory.lastDistributionItems = nextBeneficiary.distributionHistory.lastDistributionItems.slice(-10);
+    }
+    await nextBeneficiary.save();
+
+    stockOut.stockInId = nextStockIn._id;
+    stockOut.beneficiaryId = nextBeneficiary._id;
+    stockOut.locationId = nextStockIn.locationId;
+    stockOut.quantity = nextQuantity;
+    stockOut.distribution = finalDistribution;
+    stockOut.revenue = updatedRevenue;
+    stockOut.notes = nextNotes;
+    await stockOut.save();
+
+    await stockOut.populate([
+        { path: 'stockInId', select: 'product source distributionPolicy' },
+        { path: 'beneficiaryId', select: 'basicInfo status' },
+        { path: 'locationId', select: 'name type' },
+        { path: 'createdBy', select: 'name' }
+    ]);
+
+    await AuditLog.log({
+        action: 'update',
+        module: 'stockOut',
+        documentId: stockOut._id,
+        performedBy: req.user._id,
+        description: `Updated stock out distribution for beneficiary ${nextBeneficiary.basicInfo?.headOfFamilyName || nextBeneficiary._id}`,
+        previousState,
+        newState: {
+            stockInId: stockOut.stockInId,
+            beneficiaryId: stockOut.beneficiaryId,
+            quantity: stockOut.quantity,
+            distribution: stockOut.distribution,
+            revenue: stockOut.revenue,
+            notes: stockOut.notes
+        },
+        locationId: stockOut.locationId
+    });
+
+    res.json({
+        success: true,
+        message: 'Distribution updated successfully',
+        data: stockOut
+    });
+});
+
+/**
+ * Delete a distribution and return stock
+ * @route DELETE /api/stock-out/:id
+ */
+exports.deleteDistribution = asyncHandler(async (req, res) => {
+    const stockOut = await StockOut.findById(req.params.id);
+    if (!stockOut) {
+        throw new AppError('Distribution record not found', 404);
+    }
+
+    const isCompletedDistribution = stockOut.status === 'completed';
+
+    // Return stock to inventory only for completed distributions
     const stockIn = await StockIn.findById(stockOut.stockInId);
-    if (stockIn) {
-        const qtyToReturn = returnQuantity || stockOut.quantity;
-        stockIn.remainingQuantity += qtyToReturn;
+    if (stockIn && isCompletedDistribution) {
+        stockIn.remainingQuantity += stockOut.quantity;
         if (stockIn.status === 'depleted') {
             stockIn.status = 'active';
         }
         await stockIn.save();
     }
 
-    // Update stock out record
-    stockOut.status = returnQuantity ? 'returned' : 'cancelled';
-    stockOut.returnInfo = {
-        returnDate: new Date(),
-        returnQuantity: returnQuantity || stockOut.quantity,
-        returnReason: reason,
-        returnedBy: req.user._id
-    };
-    await stockOut.save();
-
-    // Update beneficiary history
+    // Update beneficiary history for completed distributions
     const beneficiary = await Beneficiary.findById(stockOut.beneficiaryId);
-    if (beneficiary) {
-        beneficiary.distributionHistory.totalReceived -= (returnQuantity || stockOut.quantity);
+    if (beneficiary && isCompletedDistribution) {
+        beneficiary.distributionHistory.totalReceived -= stockOut.quantity;
         beneficiary.distributionHistory.totalValue -= stockOut.revenue;
         await beneficiary.save();
     }
 
+    await StockOut.deleteOne({ _id: stockOut._id });
+
     // Log the action
     await AuditLog.log({
-        action: 'update',
+        action: 'delete',
         module: 'stockOut',
         documentId: stockOut._id,
         performedBy: req.user._id,
-        description: `${returnQuantity ? 'Returned' : 'Cancelled'} distribution: ${reason}`,
-        previousState: { status: 'completed' },
-        newState: { status: stockOut.status, returnReason: reason },
+        description: `Deleted distribution record and returned ${isCompletedDistribution ? stockOut.quantity : 0} units to stock`,
+        previousState: {
+            stockInId: stockOut.stockInId,
+            beneficiaryId: stockOut.beneficiaryId,
+            quantity: stockOut.quantity,
+            status: stockOut.status
+        },
         locationId: stockOut.locationId
     });
 
     res.json({
         success: true,
-        message: `Distribution ${returnQuantity ? 'returned' : 'cancelled'} successfully`,
-        data: stockOut
+        message: 'Distribution deleted successfully'
     });
 });
 
