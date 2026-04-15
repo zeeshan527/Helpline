@@ -98,6 +98,25 @@ export const stockInAPI = {
   getCategories: () => api.get('/stock-in/categories'),
 }
 
+// External Stock In API
+export const externalStockInAPI = {
+  getAll: (params) => api.get('/external-stock-in', { params }),
+  getById: (id) => api.get(`/external-stock-in/${id}`),
+  create: (data) => api.post('/external-stock-in', data),
+  update: (id, data) => api.put(`/external-stock-in/${id}`, data),
+  delete: (id) => api.delete(`/external-stock-in/${id}`),
+  transfer: (data) => api.post('/external-stock-in/transfer', data),
+}
+
+// External Stock Out API
+export const externalStockOutAPI = {
+  getAll: (params) => api.get('/external-stock-out', { params }),
+  getById: (id) => api.get(`/external-stock-out/${id}`),
+  create: (data) => api.post('/external-stock-out', data),
+  update: (id, data) => api.put(`/external-stock-out/${id}`, data),
+  delete: (id) => api.delete(`/external-stock-out/${id}`),
+}
+
 // Stock Out API
 export const stockOutAPI = {
   getAll: (params) => api.get('/stock-out', { params }),
@@ -147,6 +166,8 @@ api.beneficiaries = beneficiariesAPI
 api.donors = donorsAPI
 api.locations = locationsAPI
 api.stockIn = stockInAPI
+api.externalStockIn = externalStockInAPI
+api.externalStockOut = externalStockOutAPI
 api.stockOut = stockOutAPI
 api.dashboard = dashboardAPI
 api.reports = reportsAPI

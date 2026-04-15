@@ -32,6 +32,8 @@ const NAV_ITEMS = {
       children: [
         { name: 'Stock In', href: '/inventory/stock-in', icon: PackagePlus },
         { name: 'Stock Out', href: '/inventory/stock-out', icon: PackageMinus },
+        { name: 'External Stock In', href: '/inventory/external-stock-in', icon: PackagePlus },
+        { name: 'External Stock Out', href: '/inventory/external-stock-out', icon: PackageMinus },
       ],
     },
     { name: 'Reports', href: '/reports', icon: FileBarChart },
@@ -44,6 +46,8 @@ const NAV_ITEMS = {
     { name: 'Donors', href: '/donors', icon: Heart },
     { name: 'Locations', href: '/locations', icon: MapPin },
     { name: 'Fund Categories', href: '/fund-categories', icon: Wallet },
+    { name: 'External Stock In', href: '/inventory/external-stock-in', icon: PackagePlus },
+    { name: 'External Stock Out', href: '/inventory/external-stock-out', icon: PackageMinus },
     { name: 'Reports', href: '/reports', icon: FileBarChart },
   ],    
   master_inventory_manager: [
@@ -55,6 +59,8 @@ const NAV_ITEMS = {
       children: [
         { name: 'Stock In (All)', href: '/inventory/stock-in', icon: PackagePlus },
         { name: 'Stock Out (All)', href: '/inventory/stock-out', icon: PackageMinus },
+        { name: 'External Stock In (All)', href: '/inventory/external-stock-in', icon: PackagePlus },
+        { name: 'External Stock Out (All)', href: '/inventory/external-stock-out', icon: PackageMinus },
       ],
     },
     { name: 'Reports', href: '/reports', icon: FileBarChart },
@@ -68,6 +74,8 @@ const NAV_ITEMS = {
       children: [
         { name: 'Stock In (Mine)', href: '/inventory/stock-in', icon: PackagePlus },
         { name: 'Stock Out (Mine)', href: '/inventory/stock-out', icon: PackageMinus },
+        { name: 'External Stock In (Mine)', href: '/inventory/external-stock-in', icon: PackagePlus },
+        { name: 'External Stock Out (Mine)', href: '/inventory/external-stock-out', icon: PackageMinus },
       ],
     },
     { name: 'Locations', href: '/locations', icon: MapPin },

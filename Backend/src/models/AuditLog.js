@@ -11,7 +11,7 @@ const auditLogSchema = new mongoose.Schema({
     // Module/Entity affected
     module: {
         type: String,
-        enum: ['user', 'beneficiary', 'donor', 'location', 'stockIn', 'stockOut', 'auth'],
+        enum: ['user', 'beneficiary', 'donor', 'location', 'stockIn', 'stockOut', 'externalStockIn', 'externalStockOut', 'auth'],
         required: true
     },
     

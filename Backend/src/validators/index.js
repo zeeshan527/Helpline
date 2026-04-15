@@ -316,6 +316,60 @@ const stockOutValidators = {
     ]
 };
 
+// External Stock In Validators
+const externalStockInValidators = {
+    create: [
+        body('packageName')
+            .trim()
+            .notEmpty().withMessage('Package name is required'),
+        body('quantity')
+            .notEmpty().withMessage('Quantity is required')
+            .isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
+        body('donorId')
+            .notEmpty().withMessage('Donor is required')
+            .isMongoId().withMessage('Invalid donor ID'),
+        body('locationId')
+            .notEmpty().withMessage('Location is required')
+            .isMongoId().withMessage('Invalid location ID'),
+        validate
+    ],
+    update: [
+        param('id').isMongoId().withMessage('Invalid external stock in ID'),
+        body('packageName')
+            .optional()
+            .trim()
+            .notEmpty().withMessage('Package name cannot be empty'),
+        body('quantity')
+            .optional()
+            .isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
+        body('donorId')
+            .optional()
+            .isMongoId().withMessage('Invalid donor ID'),
+        body('locationId')
+            .optional()
+            .isMongoId().withMessage('Invalid location ID'),
+        validate
+    ],
+    getById: [
+        param('id').isMongoId().withMessage('Invalid external stock in ID'),
+        validate
+    ],
+    transfer: [
+        body('externalStockInId')
+            .notEmpty().withMessage('External stock in ID is required')
+            .isMongoId().withMessage('Invalid external stock in ID'),
+        body('toLocationId')
+            .notEmpty().withMessage('Destination location is required')
+            .isMongoId().withMessage('Invalid destination location ID'),
+        body('quantity')
+            .notEmpty().withMessage('Quantity is required')
+            .isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
+        validate
+    ]
+};
+
+const externalStockOutValidators = require('./externalStockOutValidators').externalStockOutValidators;
+
 // Report Validators
 const reportValidators = {
     beneficiary: [
@@ -351,7 +405,7 @@ const queryValidators = {
             .isInt({ min: 1 }).withMessage('Page must be a positive integer'),
         query('limit')
             .optional()
-            .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+            .isInt({ min: 1, max: 500 }).withMessage('Limit must be between 1 and 500'),
         query('sortBy')
             .optional()
             .isString().withMessage('Sort by must be a string'),
@@ -490,6 +544,8 @@ module.exports = {
     locationValidators,
     stockInValidators,
     stockOutValidators,
+    externalStockInValidators,
+    externalStockOutValidators,
     reportValidators,
     queryValidators,
     userValidators,

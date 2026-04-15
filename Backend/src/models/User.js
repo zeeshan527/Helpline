@@ -60,6 +60,18 @@ const userSchema = new mongoose.Schema({
             update: { type: Boolean, default: false },
             delete: { type: Boolean, default: false }
         },
+        externalStockIn: {
+            create: { type: Boolean, default: false },
+            read: { type: Boolean, default: false },
+            update: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false }
+        },
+        externalStockOut: {
+            create: { type: Boolean, default: false },
+            read: { type: Boolean, default: false },
+            update: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false }
+        },
         reports: {
             view: { type: Boolean, default: false },
             export: { type: Boolean, default: false }
@@ -92,7 +104,7 @@ userSchema.pre('save', function(next) {
     if (this.isNew || this.isModified('role')) {
         if (this.role === 'admin') {
             // Admin gets all permissions
-            const modules = ['beneficiaries', 'donors', 'locations', 'stockIn', 'stockOut', 'users', 'fundCategories'];
+            const modules = ['beneficiaries', 'donors', 'locations', 'stockIn', 'stockOut', 'externalStockIn', 'externalStockOut', 'users', 'fundCategories'];
             modules.forEach(module => {
                 this.permissions[module] = {
                     create: true,
@@ -106,12 +118,16 @@ userSchema.pre('save', function(next) {
             // Full inventory access
             this.permissions.stockIn = { create: true, read: true, update: true, delete: true, transfer: true };
             this.permissions.stockOut = { create: true, read: true, update: true, delete: true };
+            this.permissions.externalStockIn = { create: true, read: true, update: true, delete: true };
+            this.permissions.externalStockOut = { create: true, read: true, update: true, delete: true };
             this.permissions.locations = { create: true, read: true, update: true, delete: true};
             this.permissions.reports = { view: true, export: true };
         } else if (this.role === 'location_inventory_manager') {
             // Only assigned location
             this.permissions.stockIn = { create: true, read: true, update: true, delete: false };
             this.permissions.stockOut = { create: true, read: true, update: true, delete: false };
+            this.permissions.externalStockIn = { create: true, read: true, update: true, delete: true };
+            this.permissions.externalStockOut = { create: true, read: true, update: true, delete: true };
             this.permissions.locations = { create: true, read: true, update: true, delete: true };
             this.permissions.reports = { view: true };
         } else if (this.role === 'staff') {
@@ -121,6 +137,8 @@ userSchema.pre('save', function(next) {
             this.permissions.locations = { read: true };
             this.permissions.stockIn = { create: true, read: true };
             this.permissions.stockOut = { create: true, read: true };
+            this.permissions.externalStockIn = { create: true, read: true, update: true, delete: true };
+            this.permissions.externalStockOut = { create: true, read: true, update: true, delete: true };
             this.permissions.fundCategories = { create: true, read: true, update: true, delete: true };
             this.permissions.reports = { view: true };
         }

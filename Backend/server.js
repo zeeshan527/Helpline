@@ -24,6 +24,8 @@ app.use("/api/beneficiaries", require("./src/routes/beneficiary"));
 app.use("/api/donors", require("./src/routes/donor"));
 app.use("/api/locations", require("./src/routes/location"));
 app.use("/api/stock-in", require("./src/routes/stockIn"));
+app.use("/api/external-stock-in", require("./src/routes/externalStockIn"));
+app.use("/api/external-stock-out", require("./src/routes/externalStockOut"));
 app.use("/api/stock-out", require("./src/routes/stockOut"));
 app.use("/api/reports", require("./src/routes/report"));
 app.use("/api/dashboard", require("./src/routes/dashboard"));

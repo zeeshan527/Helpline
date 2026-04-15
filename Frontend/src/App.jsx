@@ -11,6 +11,8 @@ import Beneficiaries from './pages/Beneficiaries'
 import Donors from './pages/Donors'
 import Locations from './pages/Locations'
 import StockIn from './pages/StockIn'
+import ExternalStockIn from './pages/ExternalStockIn'
+import ExternalStockOut from './pages/ExternalStockOut'
 import StockOut from './pages/StockOut'
 import Reports from './pages/Reports'
 import FundCategories from './pages/FundCategories'
@@ -92,6 +94,24 @@ export default function App() {
           } 
         />
         
+        <Route 
+          path="/inventory/external-stock-in" 
+          element={
+            <ProtectedRoute permission="externalStockIn.read">
+              <ExternalStockIn />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/inventory/external-stock-out" 
+          element={
+            <ProtectedRoute permission="externalStockOut.read">
+              <ExternalStockOut />
+            </ProtectedRoute>
+          } 
+        />
+
         <Route 
           path="/inventory/stock-out" 
           element={

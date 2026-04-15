@@ -61,10 +61,29 @@ export function AuthProvider({ children }) {
       return true
     }
 
+    // External stock in is role-granted for these roles, even if older users miss this key.
+    if (
+      permission.startsWith('externalStockIn.') &&
+      ['staff', 'master_inventory_manager', 'location_inventory_manager'].includes(user.role)
+    ) {
+      return true
+    }
+
+    if (
+      permission.startsWith('externalStockOut.') &&
+      ['staff', 'master_inventory_manager', 'location_inventory_manager'].includes(user.role)
+    ) {
+      return true
+    }
+
     // For master_inventory_manager and location_inventory_manager, allow stockIn/stockOut permissions
     if (
       (user.role === 'master_inventory_manager' || user.role === 'location_inventory_manager') &&
-      (permission.startsWith('stockIn.') || permission.startsWith('stockOut.'))
+      (
+        permission.startsWith('stockIn.') ||
+        permission.startsWith('stockOut.') ||
+        permission.startsWith('externalStockIn.')
+      )
     ) {
       // Check permission object
       const [module, action] = permission.split('.')
